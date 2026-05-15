@@ -26,12 +26,12 @@ This project relies on environment variables for configuration. Create a `.env` 
 TELEGRAM_BOT_TOKEN="your_telegram_bot_token"
 TELEGRAM_CHAT_ID="your_telegram_chat_id"
 
-# Optional: Live Score Integration (api-sports.io)
+# Required: Live Match Detection & Score Integration (api-sports.io)
 API_FOOTBALL_KEY="your_api_football_key"
 
 # Tuning Variables
 ASK_PRICE_THRESHOLD="0.10"       # Price at which to trigger a dip alert
-POLL_INTERVAL_MARKETS="300"      # Seconds between Gamma API market discovery polls
+POLL_INTERVAL_MARKETS="900"      # Seconds between API-Football / Gamma API market discovery polls (15 min recommended to fit free tier)
 WS_RECONNECT_DELAY="5"           # Seconds to wait before reconnecting WebSocket
 ALERT_COOLDOWN="1200"            # Seconds to wait before alerting again for the same token
 ```

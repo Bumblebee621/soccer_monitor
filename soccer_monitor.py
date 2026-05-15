@@ -25,7 +25,7 @@ TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 API_FOOTBALL_KEY = os.getenv("API_FOOTBALL_KEY")
 ASK_PRICE_THRESHOLD = float(os.getenv("ASK_PRICE_THRESHOLD", "0.10"))
-POLL_INTERVAL_MARKETS = int(os.getenv("POLL_INTERVAL_MARKETS", "300"))
+POLL_INTERVAL_MARKETS = int(os.getenv("POLL_INTERVAL_MARKETS", "900"))
 WS_RECONNECT_DELAY = int(os.getenv("WS_RECONNECT_DELAY", "5"))
 ALERT_COOLDOWN = int(os.getenv("ALERT_COOLDOWN", "1200"))
 
@@ -45,61 +45,84 @@ class MarketInfo:
     under_token_id: str
 
 
-class ScoreFetcher:
+class LiveMatchTracker:
     def __init__(self, session: aiohttp.ClientSession):
         self.session = session
         self.api_key = API_FOOTBALL_KEY
         self.base_url = "https://v3.football.api-sports.io/"
         self.headers = {'x-apisports-key': self.api_key} if self.api_key else {}
+        self.live_fixtures = []
 
-    async def get_live_score(self, event_title: str) -> str:
-        """Fetches live score for a given event title using fuzzy matching."""
+    async def fetch_live(self):
+        """Fetches currently live fixtures for specified leagues."""
         if not self.api_key:
-            return "N/A (API-Football key not configured)"
+            return
 
         try:
             url = f"{self.base_url}fixtures"
-            params = {'live': 'all'}
+            # 39: Premier League, 140: La Liga, 135: Serie A
+            params = {'live': '39-140-135'}
             async with self.session.get(url, headers=self.headers, params=params) as response:
                 if response.status != 200:
                     logger.error(f"API-Football error: {response.status}")
-                    return "Error fetching score"
+                    return
                 
                 data = await response.json()
-                fixtures = data.get("response", [])
+                self.live_fixtures = data.get("response", [])
                 
-                best_match = None
-                best_ratio = 0.0
-
-                for fixture in fixtures:
-                    teams = fixture.get("teams", {})
-                    home = teams.get("home", {}).get("name", "")
-                    away = teams.get("away", {}).get("name", "")
-                    fixture_title = f"{home} vs {away}"
-                    fixture_title_alt = f"{away} vs {home}"
-                    
-                    # Check similarity
-                    ratio1 = difflib.SequenceMatcher(None, event_title.lower(), fixture_title.lower()).ratio()
-                    ratio2 = difflib.SequenceMatcher(None, event_title.lower(), fixture_title_alt.lower()).ratio()
-                    max_ratio = max(ratio1, ratio2)
-
-                    if max_ratio > best_ratio:
-                        best_ratio = max_ratio
-                        best_match = fixture
-
-                if best_match and best_ratio > 0.55: # Raised threshold
-                    goals = best_match.get("goals", {})
-                    home_goals = goals.get("home", 0)
-                    away_goals = goals.get("away", 0)
-                    status = best_match.get("fixture", {}).get("status", {}).get("short", "")
-                    elapsed = best_match.get("fixture", {}).get("status", {}).get("elapsed", "")
-                    return f"{home_goals}-{away_goals} ({elapsed}' {status})"
-                else:
-                    return "Match not found in live fixtures"
+                # Log API-Football limits
+                remaining = response.headers.get('x-ratelimit-requests-remaining', 'Unknown')
+                logger.info(f"Fetched {len(self.live_fixtures)} live fixtures from API-Football. Daily requests remaining: {remaining}")
 
         except Exception as e:
-            logger.error(f"Exception fetching score: {e}")
-            return "Error fetching score"
+            logger.error(f"Exception fetching live fixtures: {e}")
+
+    def get_live_team_names(self) -> set:
+        """Returns a set of all team names currently playing."""
+        teams = set()
+        for fixture in self.live_fixtures:
+            teams.add(fixture.get("teams", {}).get("home", {}).get("name", ""))
+            teams.add(fixture.get("teams", {}).get("away", {}).get("name", ""))
+        # Remove empty strings if any
+        teams.discard("")
+        return teams
+
+    def get_score(self, event_title: str) -> str:
+        """Fetches live score for a given event title using fuzzy matching against cached fixtures."""
+        if not self.api_key:
+            return "N/A (API-Football key not configured)"
+
+        if not self.live_fixtures:
+            return "No live fixtures cached"
+
+        best_match = None
+        best_ratio = 0.0
+
+        for fixture in self.live_fixtures:
+            teams = fixture.get("teams", {})
+            home = teams.get("home", {}).get("name", "")
+            away = teams.get("away", {}).get("name", "")
+            fixture_title = f"{home} vs {away}"
+            fixture_title_alt = f"{away} vs {home}"
+            
+            # Check similarity
+            ratio1 = difflib.SequenceMatcher(None, event_title.lower(), fixture_title.lower()).ratio()
+            ratio2 = difflib.SequenceMatcher(None, event_title.lower(), fixture_title_alt.lower()).ratio()
+            max_ratio = max(ratio1, ratio2)
+
+            if max_ratio > best_ratio:
+                best_ratio = max_ratio
+                best_match = fixture
+
+        if best_match and best_ratio > 0.55:
+            goals = best_match.get("goals", {})
+            home_goals = goals.get("home", 0)
+            away_goals = goals.get("away", 0)
+            status = best_match.get("fixture", {}).get("status", {}).get("short", "")
+            elapsed = best_match.get("fixture", {}).get("status", {}).get("elapsed", "")
+            return f"{home_goals}-{away_goals} ({elapsed}' {status})"
+        else:
+            return "Match not found in live fixtures"
 
 
 class AlertEngine:
@@ -151,41 +174,33 @@ class AlertEngine:
         #     logger.info("Telegram credentials not configured. Skipping Telegram notification.")
 
 
-MATCH_WINDOW_HOURS = 3  # Only monitor games that started within the last N hours
-
-
 class MarketDiscovery:
     def __init__(self, session: aiohttp.ClientSession):
         self.session = session
         self.base_url = "https://gamma-api.polymarket.com/events"
 
-    @staticmethod
-    def _parse_datetime(date_str: Optional[str]) -> Optional[datetime]:
-        """Parse an ISO 8601 or Postgres-style datetime string from the Gamma API."""
-        if not date_str:
-            return None
-        try:
-            # Handle "Z" suffix, "+00:00", and Postgres-style "+00" formats
-            cleaned = date_str.replace("Z", "+00:00")
-            # Handle Postgres "+00" offset (e.g., "2026-01-19 17:00:00+00")
-            if cleaned[-3] == '+' or cleaned[-3] == '-':
-                cleaned = cleaned + ":00"
-            return datetime.fromisoformat(cleaned)
-        except (ValueError, TypeError):
-            return None
+    def _event_has_live_team(self, event_title: str, live_teams: set) -> bool:
+        """Checks if any team in the event title fuzzy matches a live team."""
+        if not live_teams:
+            return False
+            
+        # Split "Team A vs. Team B"
+        parts = event_title.split(' vs. ')
+        if len(parts) != 2:
+            parts = event_title.split(' vs ')
+        
+        for part in parts:
+            part = part.strip().lower()
+            for live_team in live_teams:
+                # Basic fuzzy match
+                if difflib.SequenceMatcher(None, part, live_team.lower()).ratio() > 0.7:
+                    return True
+        return False
 
-    @staticmethod
-    def _is_live(kickoff: datetime) -> bool:
-        """Returns True if the match has started but is within the match window."""
-        now = datetime.now(timezone.utc)
-        return kickoff <= now <= kickoff + timedelta(hours=MATCH_WINDOW_HOURS)
-
-    async def fetch_markets(self) -> Dict[str, MarketInfo]:
+    async def fetch_markets(self, live_teams: set) -> Dict[str, MarketInfo]:
         logger.info("Fetching active soccer markets from Gamma API...")
         markets_dict = {}
-        skipped_not_started = 0
-        skipped_too_old = 0
-        skipped_no_date = 0
+        skipped_not_live = 0
         
         try:
             offset = 0
@@ -207,8 +222,6 @@ class MarketDiscovery:
                     if not events:
                         break
                     
-                    now = datetime.now(timezone.utc)
-                    
                     for event in events:
                         tags = [tag.get('label', '') for tag in event.get('tags', [])]
                         lower_tags = [t.lower() for t in tags]
@@ -217,17 +230,9 @@ class MarketDiscovery:
                         if not any(al in lower_tags for al in allowed_leagues):
                             continue
 
-                        # --- Filter 1: Event-level endDate (used as kickoff proxy) ---
-                        # On Polymarket, event endDate is typically set to the match kickoff time.
-                        event_kickoff = self._parse_datetime(event.get('endDate'))
-                        if event_kickoff is None:
-                            skipped_no_date += 1
-                            continue
-                        if event_kickoff > now:
-                            skipped_not_started += 1
-                            continue
-                        if event_kickoff + timedelta(hours=MATCH_WINDOW_HOURS) < now:
-                            skipped_too_old += 1
+                        event_title = event.get('title', 'Unknown Match')
+                        if not self._event_has_live_team(event_title, live_teams):
+                            skipped_not_live += 1
                             continue
 
                         league_tags = [t for t in tags if t not in ['Soccer', 'Sports', 'Featured', 'Games']]
@@ -236,11 +241,11 @@ class MarketDiscovery:
                         for market in event.get('markets', []):
                             question = market.get('question', '').lower()
                             if ("total goals" in question or "over/under" in question or "o/u" in question) and "corners" not in question:
-                                
-                                # --- Filter 2: Market-level gameStartTime (actual kickoff) ---
-                                game_start = self._parse_datetime(market.get('gameStartTime'))
-                                if game_start and not self._is_live(game_start):
+                                # Skip specific goal lines requested by user
+                                if "0.5" in question or "5.5" in question:
                                     continue
+                                
+                                # Removed Market-level gameStartTime check as API-Football is now source of truth
                                 
                                 tokens = market.get('clobTokenIds')
                                 outcomes = market.get('outcomes')
@@ -278,7 +283,7 @@ class MarketDiscovery:
             
         logger.info(
             f"Found {len(markets_dict)} live Over/Under markets "
-            f"(skipped: {skipped_not_started} not started, {skipped_too_old} finished, {skipped_no_date} no date)."
+            f"(skipped {skipped_not_live} events not currently live according to API-Football)."
         )
         return markets_dict
 
@@ -286,10 +291,10 @@ class MarketDiscovery:
 LOG_THROTTLE_SECONDS = 3.0
 
 class OrderBookMonitor:
-    def __init__(self, alert_engine: AlertEngine, score_fetcher: ScoreFetcher, markets_changed_event: asyncio.Event):
+    def __init__(self, alert_engine: AlertEngine, live_match_tracker: LiveMatchTracker, markets_changed_event: asyncio.Event):
         self.ws_url = "wss://ws-subscriptions-clob.polymarket.com/ws/market"
         self.alert_engine = alert_engine
-        self.score_fetcher = score_fetcher
+        self.live_match_tracker = live_match_tracker
         self.monitored_markets: Dict[str, MarketInfo] = {}
         self.book_state: Dict[str, Dict[float, float]] = {} # token_id -> {price: size}
         self.markets_lock = asyncio.Lock()
@@ -315,10 +320,8 @@ class OrderBookMonitor:
         if not market:
             return
         
-        # Only fetch score if we detect a dip
-        # API-Football disabled for now
-        # score = await self.score_fetcher.get_live_score(market.event_title)
-        score = "N/A (Score fetching disabled)"
+        # Get score from cached API-Football data
+        score = self.live_match_tracker.get_score(market.event_title)
         await self.alert_engine.send_alert(market, current_ask, score)
 
     async def _process_event(self, data: dict):
@@ -444,19 +447,23 @@ async def main():
     if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
         logger.warning("⚠️  Telegram credentials not configured — alerts will be logged only.")
     if not API_FOOTBALL_KEY:
-        logger.warning("⚠️  API-Football key not configured — live scores will be unavailable.")
+        logger.error("❌ API-Football key is REQUIRED for live match detection. Exiting.")
+        return
         
     markets_changed_event = asyncio.Event()
     
     async with aiohttp.ClientSession() as session:
         discovery = MarketDiscovery(session)
-        score_fetcher = ScoreFetcher(session)
+        live_match_tracker = LiveMatchTracker(session)
         alert_engine = AlertEngine(session)
-        monitor = OrderBookMonitor(alert_engine, score_fetcher, markets_changed_event)
+        monitor = OrderBookMonitor(alert_engine, live_match_tracker, markets_changed_event)
         
         async def discovery_loop():
             while True:
-                markets = await discovery.fetch_markets()
+                await live_match_tracker.fetch_live()
+                live_teams = live_match_tracker.get_live_team_names()
+                
+                markets = await discovery.fetch_markets(live_teams)
                 await monitor.set_markets(markets)
                 await asyncio.sleep(POLL_INTERVAL_MARKETS)
                 
