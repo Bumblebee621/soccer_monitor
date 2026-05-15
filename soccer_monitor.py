@@ -1,3 +1,8 @@
+"""
+Soccer Monitor Daemon
+Monitors Polymarket soccer Over/Under markets for price anomalies.
+"""
+
 import asyncio
 import json
 import logging
@@ -21,6 +26,7 @@ API_FOOTBALL_KEY = os.getenv("API_FOOTBALL_KEY")
 ASK_PRICE_THRESHOLD = float(os.getenv("ASK_PRICE_THRESHOLD", "0.10"))
 POLL_INTERVAL_MARKETS = int(os.getenv("POLL_INTERVAL_MARKETS", "300"))
 WS_RECONNECT_DELAY = int(os.getenv("WS_RECONNECT_DELAY", "5"))
+ALERT_COOLDOWN = int(os.getenv("ALERT_COOLDOWN", "300"))
 
 logging.basicConfig(
     level=logging.INFO,
@@ -36,11 +42,11 @@ class MarketInfo:
     league: str
     market_question: str
     under_token_id: str
-    threshold: float
 
 
 class ScoreFetcher:
-    def __init__(self):
+    def __init__(self, session: aiohttp.ClientSession):
+        self.session = session
         self.api_key = API_FOOTBALL_KEY
         self.base_url = "https://v3.football.api-sports.io/"
         self.headers = {'x-apisports-key': self.api_key} if self.api_key else {}
@@ -51,45 +57,44 @@ class ScoreFetcher:
             return "N/A (API-Football key not configured)"
 
         try:
-            async with aiohttp.ClientSession() as session:
-                url = f"{self.base_url}fixtures"
-                params = {'live': 'all'}
-                async with session.get(url, headers=self.headers, params=params) as response:
-                    if response.status != 200:
-                        logger.error(f"API-Football error: {response.status}")
-                        return "Error fetching score"
+            url = f"{self.base_url}fixtures"
+            params = {'live': 'all'}
+            async with self.session.get(url, headers=self.headers, params=params) as response:
+                if response.status != 200:
+                    logger.error(f"API-Football error: {response.status}")
+                    return "Error fetching score"
+                
+                data = await response.json()
+                fixtures = data.get("response", [])
+                
+                best_match = None
+                best_ratio = 0.0
+
+                for fixture in fixtures:
+                    teams = fixture.get("teams", {})
+                    home = teams.get("home", {}).get("name", "")
+                    away = teams.get("away", {}).get("name", "")
+                    fixture_title = f"{home} vs {away}"
+                    fixture_title_alt = f"{away} vs {home}"
                     
-                    data = await response.json()
-                    fixtures = data.get("response", [])
-                    
-                    best_match = None
-                    best_ratio = 0.0
+                    # Check similarity
+                    ratio1 = difflib.SequenceMatcher(None, event_title.lower(), fixture_title.lower()).ratio()
+                    ratio2 = difflib.SequenceMatcher(None, event_title.lower(), fixture_title_alt.lower()).ratio()
+                    max_ratio = max(ratio1, ratio2)
 
-                    for fixture in fixtures:
-                        teams = fixture.get("teams", {})
-                        home = teams.get("home", {}).get("name", "")
-                        away = teams.get("away", {}).get("name", "")
-                        fixture_title = f"{home} vs {away}"
-                        fixture_title_alt = f"{away} vs {home}"
-                        
-                        # Check similarity
-                        ratio1 = difflib.SequenceMatcher(None, event_title.lower(), fixture_title.lower()).ratio()
-                        ratio2 = difflib.SequenceMatcher(None, event_title.lower(), fixture_title_alt.lower()).ratio()
-                        max_ratio = max(ratio1, ratio2)
+                    if max_ratio > best_ratio:
+                        best_ratio = max_ratio
+                        best_match = fixture
 
-                        if max_ratio > best_ratio:
-                            best_ratio = max_ratio
-                            best_match = fixture
-
-                    if best_match and best_ratio > 0.4: # Arbitrary threshold
-                        goals = best_match.get("goals", {})
-                        home_goals = goals.get("home", 0)
-                        away_goals = goals.get("away", 0)
-                        status = best_match.get("fixture", {}).get("status", {}).get("short", "")
-                        elapsed = best_match.get("fixture", {}).get("status", {}).get("elapsed", "")
-                        return f"{home_goals}-{away_goals} ({elapsed}' {status})"
-                    else:
-                        return "Match not found in live fixtures"
+                if best_match and best_ratio > 0.55: # Raised threshold
+                    goals = best_match.get("goals", {})
+                    home_goals = goals.get("home", 0)
+                    away_goals = goals.get("away", 0)
+                    status = best_match.get("fixture", {}).get("status", {}).get("short", "")
+                    elapsed = best_match.get("fixture", {}).get("status", {}).get("elapsed", "")
+                    return f"{home_goals}-{away_goals} ({elapsed}' {status})"
+                else:
+                    return "Match not found in live fixtures"
 
         except Exception as e:
             logger.error(f"Exception fetching score: {e}")
@@ -97,11 +102,12 @@ class ScoreFetcher:
 
 
 class AlertEngine:
-    def __init__(self):
+    def __init__(self, session: aiohttp.ClientSession):
+        self.session = session
         self.bot_token = TELEGRAM_BOT_TOKEN
         self.chat_id = TELEGRAM_CHAT_ID
         self.last_alert_time: Dict[str, float] = {}
-        self.cooldown = 300 # 5 minutes cooldown per market
+        self.cooldown = ALERT_COOLDOWN
 
     async def send_alert(self, market: MarketInfo, current_ask: float, score: str):
         current_time = time.time()
@@ -132,12 +138,11 @@ class AlertEngine:
                     "text": message,
                     "parse_mode": "Markdown"
                 }
-                async with aiohttp.ClientSession() as session:
-                    async with session.post(url, json=payload) as response:
-                        if response.status != 200:
-                            logger.error(f"Failed to send Telegram alert: {response.status}")
-                        else:
-                            logger.info("Telegram alert sent successfully.")
+                async with self.session.post(url, json=payload) as response:
+                    if response.status != 200:
+                        logger.error(f"Failed to send Telegram alert: {response.status}")
+                    else:
+                        logger.info("Telegram alert sent successfully.")
             except Exception as e:
                 logger.error(f"Exception sending Telegram alert: {e}")
         else:
@@ -145,7 +150,8 @@ class AlertEngine:
 
 
 class MarketDiscovery:
-    def __init__(self):
+    def __init__(self, session: aiohttp.ClientSession):
+        self.session = session
         self.base_url = "https://gamma-api.polymarket.com/events"
 
     async def fetch_markets(self) -> Dict[str, MarketInfo]:
@@ -153,19 +159,24 @@ class MarketDiscovery:
         markets_dict = {}
         
         try:
-            async with aiohttp.ClientSession() as session:
+            offset = 0
+            limit = 100
+            while True:
                 params = {
                     'active': 'true',
                     'closed': 'false',
                     'tag_slug': 'soccer',
-                    'limit': '100'
+                    'limit': str(limit),
+                    'offset': str(offset)
                 }
-                async with session.get(self.base_url, params=params) as response:
+                async with self.session.get(self.base_url, params=params) as response:
                     if response.status != 200:
                         logger.error(f"Gamma API error: {response.status}")
-                        return markets_dict
+                        break
                     
                     events = await response.json()
+                    if not events:
+                        break
                     
                     for event in events:
                         tags = [tag.get('label', '') for tag in event.get('tags', [])]
@@ -176,25 +187,35 @@ class MarketDiscovery:
                             question = market.get('question', '').lower()
                             if "total goals" in question or "over/under" in question:
                                 tokens = market.get('clobTokenIds')
-                                if not tokens:
+                                outcomes = market.get('outcomes')
+                                if not tokens or not outcomes:
                                     continue
                                 
                                 try:
                                     token_list = json.loads(tokens)
-                                    if len(token_list) >= 2:
-                                        # Assuming [Yes_token, No_token] and No = Under
-                                        under_token = token_list[1]
+                                    outcome_list = json.loads(outcomes)
+                                    if len(token_list) == len(outcome_list):
+                                        under_idx = -1
+                                        for idx, outcome in enumerate(outcome_list):
+                                            if outcome.lower() in ("under", "no"):
+                                                under_idx = idx
+                                                break
                                         
-                                        markets_dict[under_token] = MarketInfo(
-                                            event_title=event.get('title', 'Unknown Match'),
-                                            event_slug=event.get('slug', ''),
-                                            league=league,
-                                            market_question=market.get('question', ''),
-                                            under_token_id=under_token,
-                                            threshold=ASK_PRICE_THRESHOLD # Default, could parse from question
-                                        )
-                                except json.JSONDecodeError:
-                                    pass
+                                        if under_idx != -1:
+                                            under_token = token_list[under_idx]
+                                            markets_dict[under_token] = MarketInfo(
+                                                event_title=event.get('title', 'Unknown Match'),
+                                                event_slug=event.get('slug', ''),
+                                                league=league,
+                                                market_question=market.get('question', ''),
+                                                under_token_id=under_token
+                                            )
+                                except json.JSONDecodeError as e:
+                                    logger.warning(f"Malformed JSON in market '{market.get('question', '?')}': {e}")
+                    
+                    if len(events) < limit:
+                        break
+                    offset += limit
 
         except Exception as e:
             logger.error(f"Exception fetching markets: {e}")
@@ -204,18 +225,23 @@ class MarketDiscovery:
 
 
 class OrderBookMonitor:
-    def __init__(self, alert_engine: AlertEngine, score_fetcher: ScoreFetcher):
+    def __init__(self, alert_engine: AlertEngine, score_fetcher: ScoreFetcher, markets_changed_event: asyncio.Event):
         self.ws_url = "wss://ws-subscriptions-clob.polymarket.com/ws/market"
         self.alert_engine = alert_engine
         self.score_fetcher = score_fetcher
         self.monitored_markets: Dict[str, MarketInfo] = {}
-        self.book_state: Dict[str, List[Dict]] = {} # token_id -> asks
+        self.book_state: Dict[str, Dict[float, float]] = {} # token_id -> {price: size}
+        self.markets_lock = asyncio.Lock()
+        self.markets_changed_event = markets_changed_event
 
-    def set_markets(self, markets: Dict[str, MarketInfo]):
-        self.monitored_markets = markets
+    async def set_markets(self, markets: Dict[str, MarketInfo]):
+        async with self.markets_lock:
+            self.monitored_markets = markets
+        self.markets_changed_event.set()
 
     async def process_anomaly(self, token_id: str, current_ask: float):
-        market = self.monitored_markets.get(token_id)
+        async with self.markets_lock:
+            market = self.monitored_markets.get(token_id)
         if not market:
             return
         
@@ -230,16 +256,13 @@ class OrderBookMonitor:
             
             if event_type == "book":
                 # Full snapshot
-                for book_data in data.get("bids", []) + data.get("asks", []): # actually the payload might just be a single token book
-                    pass # The docs say book event has asset_id, bids, asks.
-                
                 asset_id = data.get("asset_id")
                 asks = data.get("asks", [])
                 
                 if asset_id and asks:
-                    self.book_state[asset_id] = asks
+                    self.book_state[asset_id] = {float(ask.get("price", "1.0")): float(ask.get("size", "0.0")) for ask in asks}
                     # Check lowest ask
-                    lowest_ask = min([float(ask.get("price", "1.0")) for ask in asks])
+                    lowest_ask = min(self.book_state[asset_id].keys(), default=1.0)
                     if lowest_ask <= ASK_PRICE_THRESHOLD:
                         await self.process_anomaly(asset_id, lowest_ask)
 
@@ -254,27 +277,37 @@ class OrderBookMonitor:
                     
                     if side == "SELL": # Asks
                         if asset_id not in self.book_state:
-                            self.book_state[asset_id] = []
+                            self.book_state[asset_id] = {}
                             
-                        # Update book state (simplified: we mainly care if lowest ask drops)
-                        # In a real rigorous order book you'd insert/remove/update exactly.
-                        # For anomaly detection, if size > 0 and price <= threshold, trigger
-                        if size > 0 and price <= ASK_PRICE_THRESHOLD:
-                            await self.process_anomaly(asset_id, price)
+                        if size > 0:
+                            self.book_state[asset_id][price] = size
+                        else:
+                            self.book_state[asset_id].pop(price, None)
+                            
+                        lowest_ask = min(self.book_state[asset_id].keys(), default=1.0)
+                        if lowest_ask <= ASK_PRICE_THRESHOLD:
+                            await self.process_anomaly(asset_id, lowest_ask)
 
         except Exception as e:
             logger.error(f"Error handling WS message: {e}")
 
+    async def _read_ws(self, ws):
+        async for message in ws:
+            await self._handle_message(message)
+
     async def run(self):
         while True:
-            if not self.monitored_markets:
+            async with self.markets_lock:
+                if not self.monitored_markets:
+                    have_markets = False
+                else:
+                    have_markets = True
+                    token_ids = list(self.monitored_markets.keys())
+
+            if not have_markets:
                 logger.info("No markets to monitor. Waiting...")
                 await asyncio.sleep(10)
                 continue
-
-            token_ids = list(self.monitored_markets.keys())
-            # Websocket connection might limit number of tokens. If > 500, we'd need multiple connections.
-            # Assuming < 500 for now.
             
             subscription_message = {
                 "assets_ids": token_ids,
@@ -282,15 +315,28 @@ class OrderBookMonitor:
                 "custom_feature_enabled": True
             }
 
+            self.markets_changed_event.clear()
+
             try:
                 logger.info(f"Connecting to WS with {len(token_ids)} tokens...")
-                # ping_interval/timeout handles the application-level pings required by many standard WS servers
                 async with websockets.connect(self.ws_url, ping_interval=10, ping_timeout=10) as ws:
                     await ws.send(json.dumps(subscription_message))
                     logger.info("Subscribed to market channels.")
                     
-                    async for message in ws:
-                        await self._handle_message(message)
+                    ws_task = asyncio.create_task(self._read_ws(ws))
+                    event_task = asyncio.create_task(self.markets_changed_event.wait())
+                    
+                    done, pending = await asyncio.wait(
+                        [ws_task, event_task],
+                        return_when=asyncio.FIRST_COMPLETED
+                    )
+                    
+                    for task in pending:
+                        task.cancel()
+                        
+                    if self.markets_changed_event.is_set():
+                        logger.info("Markets changed, reconnecting WS...")
+                        continue # Reconnect
                         
             except websockets.ConnectionClosed:
                 logger.warning("WebSocket connection closed. Reconnecting...")
@@ -303,22 +349,33 @@ class OrderBookMonitor:
 async def main():
     logger.info("Starting Soccer Over/Under Anomaly Detection Daemon...")
     
-    discovery = MarketDiscovery()
-    score_fetcher = ScoreFetcher()
-    alert_engine = AlertEngine()
-    monitor = OrderBookMonitor(alert_engine, score_fetcher)
+    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
+        logger.warning("⚠️  Telegram credentials not configured — alerts will be logged only.")
+    if not API_FOOTBALL_KEY:
+        logger.warning("⚠️  API-Football key not configured — live scores will be unavailable.")
+        
+    markets_changed_event = asyncio.Event()
     
-    async def discovery_loop():
-        while True:
-            markets = await discovery.fetch_markets()
-            monitor.set_markets(markets)
-            await asyncio.sleep(POLL_INTERVAL_MARKETS)
-            
-    # Run discovery and monitor concurrently
-    await asyncio.gather(
-        discovery_loop(),
-        monitor.run()
-    )
+    async with aiohttp.ClientSession() as session:
+        discovery = MarketDiscovery(session)
+        score_fetcher = ScoreFetcher(session)
+        alert_engine = AlertEngine(session)
+        monitor = OrderBookMonitor(alert_engine, score_fetcher, markets_changed_event)
+        
+        async def discovery_loop():
+            while True:
+                markets = await discovery.fetch_markets()
+                await monitor.set_markets(markets)
+                await asyncio.sleep(POLL_INTERVAL_MARKETS)
+                
+        tasks = asyncio.gather(
+            discovery_loop(),
+            monitor.run()
+        )
+        try:
+            await tasks
+        except asyncio.CancelledError:
+            logger.info("Shutting down gracefully...")
 
 if __name__ == "__main__":
     try:
