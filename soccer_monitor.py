@@ -1,6 +1,6 @@
 """
 Soccer Monitor Daemon
-Monitors Polymarket soccer Over/Under markets for price anomalies.
+Monitors Polymarket soccer Over/Under markets for price dips.
 """
 
 import asyncio
@@ -9,6 +9,7 @@ import logging
 import os
 import time
 import difflib
+from datetime import datetime, timezone, timedelta
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 
@@ -26,7 +27,7 @@ API_FOOTBALL_KEY = os.getenv("API_FOOTBALL_KEY")
 ASK_PRICE_THRESHOLD = float(os.getenv("ASK_PRICE_THRESHOLD", "0.10"))
 POLL_INTERVAL_MARKETS = int(os.getenv("POLL_INTERVAL_MARKETS", "300"))
 WS_RECONNECT_DELAY = int(os.getenv("WS_RECONNECT_DELAY", "5"))
-ALERT_COOLDOWN = int(os.getenv("ALERT_COOLDOWN", "300"))
+ALERT_COOLDOWN = int(os.getenv("ALERT_COOLDOWN", "1200"))
 
 logging.basicConfig(
     level=logging.INFO,
@@ -119,7 +120,7 @@ class AlertEngine:
         self.last_alert_time[market.under_token_id] = current_time
 
         message = (
-            f"🚨 *UNDER PRICE ANOMALY DETECTED*\n\n"
+            f"🚨 *UNDER PRICE DIP DETECTED*\n\n"
             f"⚽ *{market.event_title}*\n"
             f"🏆 {market.league}\n"
             f"📊 Market: {market.market_question}\n"
@@ -130,23 +131,27 @@ class AlertEngine:
 
         logger.info(f"--- ALERT TRIGGERED ---\n{message}\n-----------------------")
 
-        if self.bot_token and self.chat_id:
-            try:
-                url = f"https://api.telegram.org/bot{self.bot_token}/sendMessage"
-                payload = {
-                    "chat_id": self.chat_id,
-                    "text": message,
-                    "parse_mode": "Markdown"
-                }
-                async with self.session.post(url, json=payload) as response:
-                    if response.status != 200:
-                        logger.error(f"Failed to send Telegram alert: {response.status}")
-                    else:
-                        logger.info("Telegram alert sent successfully.")
-            except Exception as e:
-                logger.error(f"Exception sending Telegram alert: {e}")
-        else:
-            logger.info("Telegram credentials not configured. Skipping Telegram notification.")
+        # Telegram disabled for now - printing to terminal above
+        # if self.bot_token and self.chat_id:
+        #     try:
+        #         url = f"https://api.telegram.org/bot{self.bot_token}/sendMessage"
+        #         payload = {
+        #             "chat_id": self.chat_id,
+        #             "text": message,
+        #             "parse_mode": "Markdown"
+        #         }
+        #         async with self.session.post(url, json=payload) as response:
+        #             if response.status != 200:
+        #                 logger.error(f"Failed to send Telegram alert: {response.status}")
+        #             else:
+        #                 logger.info("Telegram alert sent successfully.")
+        #     except Exception as e:
+        #         logger.error(f"Exception sending Telegram alert: {e}")
+        # else:
+        #     logger.info("Telegram credentials not configured. Skipping Telegram notification.")
+
+
+MATCH_WINDOW_HOURS = 3  # Only monitor games that started within the last N hours
 
 
 class MarketDiscovery:
@@ -154,9 +159,33 @@ class MarketDiscovery:
         self.session = session
         self.base_url = "https://gamma-api.polymarket.com/events"
 
+    @staticmethod
+    def _parse_datetime(date_str: Optional[str]) -> Optional[datetime]:
+        """Parse an ISO 8601 or Postgres-style datetime string from the Gamma API."""
+        if not date_str:
+            return None
+        try:
+            # Handle "Z" suffix, "+00:00", and Postgres-style "+00" formats
+            cleaned = date_str.replace("Z", "+00:00")
+            # Handle Postgres "+00" offset (e.g., "2026-01-19 17:00:00+00")
+            if cleaned[-3] == '+' or cleaned[-3] == '-':
+                cleaned = cleaned + ":00"
+            return datetime.fromisoformat(cleaned)
+        except (ValueError, TypeError):
+            return None
+
+    @staticmethod
+    def _is_live(kickoff: datetime) -> bool:
+        """Returns True if the match has started but is within the match window."""
+        now = datetime.now(timezone.utc)
+        return kickoff <= now <= kickoff + timedelta(hours=MATCH_WINDOW_HOURS)
+
     async def fetch_markets(self) -> Dict[str, MarketInfo]:
         logger.info("Fetching active soccer markets from Gamma API...")
         markets_dict = {}
+        skipped_not_started = 0
+        skipped_too_old = 0
+        skipped_no_date = 0
         
         try:
             offset = 0
@@ -178,14 +207,41 @@ class MarketDiscovery:
                     if not events:
                         break
                     
+                    now = datetime.now(timezone.utc)
+                    
                     for event in events:
                         tags = [tag.get('label', '') for tag in event.get('tags', [])]
-                        league_tags = [t for t in tags if t not in ['Soccer', 'Sports', 'Featured']]
+                        lower_tags = [t.lower() for t in tags]
+                        
+                        allowed_leagues = {"premier league", "epl", "la liga", "laliga", "serie a"}
+                        if not any(al in lower_tags for al in allowed_leagues):
+                            continue
+
+                        # --- Filter 1: Event-level endDate (used as kickoff proxy) ---
+                        # On Polymarket, event endDate is typically set to the match kickoff time.
+                        event_kickoff = self._parse_datetime(event.get('endDate'))
+                        if event_kickoff is None:
+                            skipped_no_date += 1
+                            continue
+                        if event_kickoff > now:
+                            skipped_not_started += 1
+                            continue
+                        if event_kickoff + timedelta(hours=MATCH_WINDOW_HOURS) < now:
+                            skipped_too_old += 1
+                            continue
+
+                        league_tags = [t for t in tags if t not in ['Soccer', 'Sports', 'Featured', 'Games']]
                         league = league_tags[0] if league_tags else "General Soccer"
                         
                         for market in event.get('markets', []):
                             question = market.get('question', '').lower()
-                            if "total goals" in question or "over/under" in question:
+                            if ("total goals" in question or "over/under" in question or "o/u" in question) and "corners" not in question:
+                                
+                                # --- Filter 2: Market-level gameStartTime (actual kickoff) ---
+                                game_start = self._parse_datetime(market.get('gameStartTime'))
+                                if game_start and not self._is_live(game_start):
+                                    continue
+                                
                                 tokens = market.get('clobTokenIds')
                                 outcomes = market.get('outcomes')
                                 if not tokens or not outcomes:
@@ -220,9 +276,14 @@ class MarketDiscovery:
         except Exception as e:
             logger.error(f"Exception fetching markets: {e}")
             
-        logger.info(f"Found {len(markets_dict)} Over/Under markets.")
+        logger.info(
+            f"Found {len(markets_dict)} live Over/Under markets "
+            f"(skipped: {skipped_not_started} not started, {skipped_too_old} finished, {skipped_no_date} no date)."
+        )
         return markets_dict
 
+
+LOG_THROTTLE_SECONDS = 3.0
 
 class OrderBookMonitor:
     def __init__(self, alert_engine: AlertEngine, score_fetcher: ScoreFetcher, markets_changed_event: asyncio.Event):
@@ -233,61 +294,92 @@ class OrderBookMonitor:
         self.book_state: Dict[str, Dict[float, float]] = {} # token_id -> {price: size}
         self.markets_lock = asyncio.Lock()
         self.markets_changed_event = markets_changed_event
+        self._last_log_time: float = 0.0
+
+    def _should_log(self) -> bool:
+        """Returns True at most once every LOG_THROTTLE_SECONDS."""
+        now = time.monotonic()
+        if now - self._last_log_time >= LOG_THROTTLE_SECONDS:
+            self._last_log_time = now
+            return True
+        return False
 
     async def set_markets(self, markets: Dict[str, MarketInfo]):
         async with self.markets_lock:
             self.monitored_markets = markets
         self.markets_changed_event.set()
 
-    async def process_anomaly(self, token_id: str, current_ask: float):
+    async def process_dip(self, token_id: str, current_ask: float):
         async with self.markets_lock:
             market = self.monitored_markets.get(token_id)
         if not market:
             return
         
-        # Only fetch score if we detect an anomaly
-        score = await self.score_fetcher.get_live_score(market.event_title)
+        # Only fetch score if we detect a dip
+        # API-Football disabled for now
+        # score = await self.score_fetcher.get_live_score(market.event_title)
+        score = "N/A (Score fetching disabled)"
         await self.alert_engine.send_alert(market, current_ask, score)
+
+    async def _process_event(self, data: dict):
+        if not isinstance(data, dict):
+            return
+            
+        event_type = data.get("event_type")
+        
+        if event_type == "book":
+            # Full snapshot
+            asset_id = data.get("asset_id")
+            asks = data.get("asks", [])
+            
+            if asset_id and asks:
+                self.book_state[asset_id] = {float(ask.get("price", "1.0")): float(ask.get("size", "0.0")) for ask in asks}
+                lowest_ask = min(self.book_state[asset_id].keys(), default=1.0)
+                if lowest_ask <= ASK_PRICE_THRESHOLD:
+                    await self.process_dip(asset_id, lowest_ask)
+                else:
+                    if self._should_log():
+                        async with self.markets_lock:
+                            market = self.monitored_markets.get(asset_id)
+                        if market:
+                            logger.info(f"Tested {market.event_title} ({market.market_question}) - Lowest Ask: {lowest_ask:.3f} (No dip)")
+
+        elif event_type == "price_change":
+            # Incremental update
+            changes = data.get("price_changes", [])
+            for change in changes:
+                asset_id = change.get("asset_id")
+                side = change.get("side")
+                price = float(change.get("price", "1.0"))
+                size = float(change.get("size", "0.0"))
+                
+                if side == "SELL": # Asks
+                    if asset_id not in self.book_state:
+                        self.book_state[asset_id] = {}
+                        
+                    if size > 0:
+                        self.book_state[asset_id][price] = size
+                    else:
+                        self.book_state[asset_id].pop(price, None)
+                        
+                    lowest_ask = min(self.book_state[asset_id].keys(), default=1.0)
+                    if lowest_ask <= ASK_PRICE_THRESHOLD:
+                        await self.process_dip(asset_id, lowest_ask)
+                    else:
+                        if self._should_log():
+                            async with self.markets_lock:
+                                market = self.monitored_markets.get(asset_id)
+                            if market:
+                                logger.info(f"Tested {market.event_title} ({market.market_question}) - Lowest Ask: {lowest_ask:.3f} (No dip)")
 
     async def _handle_message(self, message: str):
         try:
             data = json.loads(message)
-            event_type = data.get("event_type")
-            
-            if event_type == "book":
-                # Full snapshot
-                asset_id = data.get("asset_id")
-                asks = data.get("asks", [])
-                
-                if asset_id and asks:
-                    self.book_state[asset_id] = {float(ask.get("price", "1.0")): float(ask.get("size", "0.0")) for ask in asks}
-                    # Check lowest ask
-                    lowest_ask = min(self.book_state[asset_id].keys(), default=1.0)
-                    if lowest_ask <= ASK_PRICE_THRESHOLD:
-                        await self.process_anomaly(asset_id, lowest_ask)
-
-            elif event_type == "price_change":
-                # Incremental update
-                changes = data.get("price_changes", [])
-                for change in changes:
-                    asset_id = change.get("asset_id")
-                    side = change.get("side")
-                    price = float(change.get("price", "1.0"))
-                    size = float(change.get("size", "0.0"))
-                    
-                    if side == "SELL": # Asks
-                        if asset_id not in self.book_state:
-                            self.book_state[asset_id] = {}
-                            
-                        if size > 0:
-                            self.book_state[asset_id][price] = size
-                        else:
-                            self.book_state[asset_id].pop(price, None)
-                            
-                        lowest_ask = min(self.book_state[asset_id].keys(), default=1.0)
-                        if lowest_ask <= ASK_PRICE_THRESHOLD:
-                            await self.process_anomaly(asset_id, lowest_ask)
-
+            if isinstance(data, list):
+                for item in data:
+                    await self._process_event(item)
+            else:
+                await self._process_event(data)
         except Exception as e:
             logger.error(f"Error handling WS message: {e}")
 
@@ -347,7 +439,7 @@ class OrderBookMonitor:
 
 
 async def main():
-    logger.info("Starting Soccer Over/Under Anomaly Detection Daemon...")
+    logger.info("Starting Soccer Over/Under Dip Detection Daemon...")
     
     if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
         logger.warning("⚠️  Telegram credentials not configured — alerts will be logged only.")
