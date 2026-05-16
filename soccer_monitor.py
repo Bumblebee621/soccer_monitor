@@ -25,6 +25,7 @@ TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 API_FOOTBALL_KEY = os.getenv("API_FOOTBALL_KEY")
 ASK_PRICE_THRESHOLD = float(os.getenv("ASK_PRICE_THRESHOLD", "0.10"))
+ASK_PRICE_MIN = float(os.getenv("ASK_PRICE_MIN", "0.01"))
 POLL_INTERVAL_MARKETS = int(os.getenv("POLL_INTERVAL_MARKETS", "900"))
 WS_RECONNECT_DELAY = int(os.getenv("WS_RECONNECT_DELAY", "5"))
 ALERT_COOLDOWN = int(os.getenv("ALERT_COOLDOWN", "1200"))
@@ -327,7 +328,7 @@ class OrderBookMonitor:
             if asset_id and asks:
                 self.book_state[asset_id] = {float(ask.get("price", "1.0")): float(ask.get("size", "0.0")) for ask in asks}
                 lowest_ask = min(self.book_state[asset_id].keys(), default=1.0)
-                if lowest_ask < ASK_PRICE_THRESHOLD:
+                if ASK_PRICE_MIN < lowest_ask < ASK_PRICE_THRESHOLD:
                     await self.process_dip(asset_id, lowest_ask)
 
         elif event_type == "price_change":
@@ -349,7 +350,7 @@ class OrderBookMonitor:
                         self.book_state[asset_id].pop(price, None)
                         
                     lowest_ask = min(self.book_state[asset_id].keys(), default=1.0)
-                    if lowest_ask < ASK_PRICE_THRESHOLD:
+                    if ASK_PRICE_MIN < lowest_ask < ASK_PRICE_THRESHOLD:
                         await self.process_dip(asset_id, lowest_ask)
 
     async def _handle_message(self, message: str):
