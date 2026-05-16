@@ -440,13 +440,33 @@ async def main():
         monitor = OrderBookMonitor(alert_engine, live_match_tracker, markets_changed_event)
         
         async def discovery_loop():
+            # IDT (Israel Daylight Time) is UTC+3
+            IDT = timezone(timedelta(hours=3))
+
             while True:
-                await live_match_tracker.fetch_live()
-                live_teams = live_match_tracker.get_live_team_names()
-                
-                markets = await discovery.fetch_markets(live_teams)
-                await monitor.set_markets(markets)
-                await asyncio.sleep(POLL_INTERVAL_MARKETS)
+                now_idt = datetime.now(IDT)
+                hour = now_idt.hour
+
+                # Active window: 14:00 - 01:00 IDT (i.e., hour >= 14 OR hour < 1)
+                if hour >= 14 or hour < 1:
+                    await live_match_tracker.fetch_live()
+                    live_teams = live_match_tracker.get_live_team_names()
+
+                    markets = await discovery.fetch_markets(live_teams)
+                    await monitor.set_markets(markets)
+                    await asyncio.sleep(POLL_INTERVAL_MARKETS)
+                else:
+                    # Outside match hours — clear markets and sleep until 14:00
+                    logger.info(f"Outside active hours ({now_idt.strftime('%H:%M')} IDT). Sleeping until 14:00 IDT...")
+                    await monitor.set_markets({})
+
+                    # Calculate seconds until 14:00 IDT today
+                    next_start = now_idt.replace(hour=14, minute=0, second=0, microsecond=0)
+                    if next_start <= now_idt:
+                        next_start += timedelta(days=1)
+                    sleep_seconds = (next_start - now_idt).total_seconds()
+                    logger.info(f"Resuming in {sleep_seconds/3600:.1f} hours.")
+                    await asyncio.sleep(sleep_seconds)
                 
         tasks = asyncio.gather(
             discovery_loop(),
