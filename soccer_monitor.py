@@ -13,8 +13,11 @@ from datetime import datetime, timezone, timedelta
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 
+# pyrefly: ignore [missing-import]
 import aiohttp
+# pyrefly: ignore [missing-import]
 import websockets
+# pyrefly: ignore [missing-import]
 from dotenv import load_dotenv
 
 # Load environment variables
