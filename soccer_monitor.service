@@ -1,0 +1,21 @@
+[Unit]
+Description=Polymarket Soccer Margins Monitor Daemon
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Replace 'ubuntu' with your actual username on the server (run 'whoami' to find out)
+User=ubuntu
+Group=ubuntu
+
+# Update these paths to match where you put the project on the server
+WorkingDirectory=/home/ubuntu/PolyMarket_Margins
+ExecStart=/home/ubuntu/PolyMarket_Margins/venv/bin/python soccer_monitor.py
+
+Restart=on-failure
+RestartSec=10
+Environment="PYTHONUNBUFFERED=1"
+
+[Install]
+WantedBy=multi-user.target

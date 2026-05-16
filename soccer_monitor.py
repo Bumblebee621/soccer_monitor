@@ -60,8 +60,8 @@ class LiveMatchTracker:
 
         try:
             url = f"{self.base_url}fixtures"
-            # 39: Premier League, 140: La Liga, 135: Serie A
-            params = {'live': '39-140-135'}
+            # 39: Premier League, 140: La Liga, 135: Serie A, 78: Bundesliga, 61: Ligue 1, 1: World Cup
+            params = {'live': '39-140-135-78-61-1'}
             async with self.session.get(url, headers=self.headers, params=params) as response:
                 if response.status != 200:
                     logger.error(f"API-Football error: {response.status}")
@@ -148,30 +148,29 @@ class AlertEngine:
             f"🏆 {market.league}\n"
             f"📊 Market: {market.market_question}\n"
             f"💰 Lowest ASK: ${current_ask:.3f}\n"
-            f"🎯 Score: {score}\n"
+            # f"🎯 Score: {score}\n"
             f"🔗 https://polymarket.com/event/{market.event_slug}"
         )
 
         logger.info(f"--- ALERT TRIGGERED ---\n{message}\n-----------------------")
 
-        # Telegram disabled for now - printing to terminal above
-        # if self.bot_token and self.chat_id:
-        #     try:
-        #         url = f"https://api.telegram.org/bot{self.bot_token}/sendMessage"
-        #         payload = {
-        #             "chat_id": self.chat_id,
-        #             "text": message,
-        #             "parse_mode": "Markdown"
-        #         }
-        #         async with self.session.post(url, json=payload) as response:
-        #             if response.status != 200:
-        #                 logger.error(f"Failed to send Telegram alert: {response.status}")
-        #             else:
-        #                 logger.info("Telegram alert sent successfully.")
-        #     except Exception as e:
-        #         logger.error(f"Exception sending Telegram alert: {e}")
-        # else:
-        #     logger.info("Telegram credentials not configured. Skipping Telegram notification.")
+        if self.bot_token and self.chat_id:
+            try:
+                url = f"https://api.telegram.org/bot{self.bot_token}/sendMessage"
+                payload = {
+                    "chat_id": self.chat_id,
+                    "text": message,
+                    "parse_mode": "Markdown"
+                }
+                async with self.session.post(url, json=payload) as response:
+                    if response.status != 200:
+                        logger.error(f"Failed to send Telegram alert: {response.status}")
+                    else:
+                        logger.info("Telegram alert sent successfully.")
+            except Exception as e:
+                logger.error(f"Exception sending Telegram alert: {e}")
+        else:
+            logger.info("Telegram credentials not configured. Skipping Telegram notification.")
 
 
 class MarketDiscovery:
@@ -226,7 +225,7 @@ class MarketDiscovery:
                         tags = [tag.get('label', '') for tag in event.get('tags', [])]
                         lower_tags = [t.lower() for t in tags]
                         
-                        allowed_leagues = {"premier league", "epl", "la liga", "laliga", "serie a"}
+                        allowed_leagues = {"premier league", "epl", "la liga", "laliga", "serie a", "bundesliga", "ligue 1", "fifa world cup"}
                         if not any(al in lower_tags for al in allowed_leagues):
                             continue
 
@@ -288,7 +287,6 @@ class MarketDiscovery:
         return markets_dict
 
 
-LOG_THROTTLE_SECONDS = 3.0
 
 class OrderBookMonitor:
     def __init__(self, alert_engine: AlertEngine, live_match_tracker: LiveMatchTracker, markets_changed_event: asyncio.Event):
@@ -299,15 +297,6 @@ class OrderBookMonitor:
         self.book_state: Dict[str, Dict[float, float]] = {} # token_id -> {price: size}
         self.markets_lock = asyncio.Lock()
         self.markets_changed_event = markets_changed_event
-        self._last_log_time: float = 0.0
-
-    def _should_log(self) -> bool:
-        """Returns True at most once every LOG_THROTTLE_SECONDS."""
-        now = time.monotonic()
-        if now - self._last_log_time >= LOG_THROTTLE_SECONDS:
-            self._last_log_time = now
-            return True
-        return False
 
     async def set_markets(self, markets: Dict[str, MarketInfo]):
         async with self.markets_lock:
@@ -321,8 +310,8 @@ class OrderBookMonitor:
             return
         
         # Get score from cached API-Football data
-        score = self.live_match_tracker.get_score(market.event_title)
-        await self.alert_engine.send_alert(market, current_ask, score)
+        # score = self.live_match_tracker.get_score(market.event_title)
+        await self.alert_engine.send_alert(market, current_ask, "")
 
     async def _process_event(self, data: dict):
         if not isinstance(data, dict):
@@ -338,14 +327,8 @@ class OrderBookMonitor:
             if asset_id and asks:
                 self.book_state[asset_id] = {float(ask.get("price", "1.0")): float(ask.get("size", "0.0")) for ask in asks}
                 lowest_ask = min(self.book_state[asset_id].keys(), default=1.0)
-                if lowest_ask <= ASK_PRICE_THRESHOLD:
+                if lowest_ask < ASK_PRICE_THRESHOLD:
                     await self.process_dip(asset_id, lowest_ask)
-                else:
-                    if self._should_log():
-                        async with self.markets_lock:
-                            market = self.monitored_markets.get(asset_id)
-                        if market:
-                            logger.info(f"Tested {market.event_title} ({market.market_question}) - Lowest Ask: {lowest_ask:.3f} (No dip)")
 
         elif event_type == "price_change":
             # Incremental update
@@ -366,14 +349,8 @@ class OrderBookMonitor:
                         self.book_state[asset_id].pop(price, None)
                         
                     lowest_ask = min(self.book_state[asset_id].keys(), default=1.0)
-                    if lowest_ask <= ASK_PRICE_THRESHOLD:
+                    if lowest_ask < ASK_PRICE_THRESHOLD:
                         await self.process_dip(asset_id, lowest_ask)
-                    else:
-                        if self._should_log():
-                            async with self.markets_lock:
-                                market = self.monitored_markets.get(asset_id)
-                            if market:
-                                logger.info(f"Tested {market.event_title} ({market.market_question}) - Lowest Ask: {lowest_ask:.3f} (No dip)")
 
     async def _handle_message(self, message: str):
         try:
