@@ -32,6 +32,7 @@ ASK_PRICE_MIN = float(os.getenv("ASK_PRICE_MIN", "0.01"))
 POLL_INTERVAL_MARKETS = int(os.getenv("POLL_INTERVAL_MARKETS", "900"))
 WS_RECONNECT_DELAY = int(os.getenv("WS_RECONNECT_DELAY", "5"))
 ALERT_COOLDOWN = int(os.getenv("ALERT_COOLDOWN", "1200"))
+SIMULATION_MODE = os.getenv("SIMULATION_MODE", "0") == "1"
 
 logging.basicConfig(
     level=logging.INFO,
@@ -59,6 +60,15 @@ class LiveMatchTracker:
 
     async def fetch_live(self):
         """Fetches currently live fixtures for specified leagues."""
+        if SIMULATION_MODE:
+            self.live_fixtures = [{
+                "teams": {"home": {"name": "Mock FC"}, "away": {"name": "Simulator United"}},
+                "goals": {"home": 1, "away": 0},
+                "fixture": {"status": {"short": "2H", "elapsed": "65"}}
+            }]
+            logger.info("SIMULATION: Fetched mock live fixtures.")
+            return
+
         if not self.api_key:
             return
 
@@ -201,6 +211,18 @@ class MarketDiscovery:
         return False
 
     async def fetch_markets(self, live_teams: set) -> Dict[str, MarketInfo]:
+        if SIMULATION_MODE:
+            logger.info("SIMULATION: Returning mock markets.")
+            return {
+                "MOCK_TOKEN_1": MarketInfo(
+                    event_title="Mock FC vs Simulator United",
+                    event_slug="mock-fc-simulator-united",
+                    league="Simulation League",
+                    market_question="Will there be over 2.5 goals?",
+                    under_token_id="MOCK_TOKEN_1"
+                )
+            }
+
         logger.info("Fetching active soccer markets from Gamma API...")
         markets_dict = {}
         skipped_not_live = 0
@@ -291,6 +313,46 @@ class MarketDiscovery:
         return markets_dict
 
 
+
+class SimulatedWebsocket:
+    """A mock websocket to simulate price drops for the mock market."""
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        pass
+
+    async def send(self, message):
+        pass
+
+    async def __aiter__(self):
+        # 1. Send an initial book snapshot above threshold
+        yield json.dumps({
+            "event_type": "book",
+            "asset_id": "MOCK_TOKEN_1",
+            "asks": [{"price": "0.15", "size": "100"}]
+        })
+        await asyncio.sleep(5)
+        # 2. Simulate a price dip to trigger alert
+        logger.info("SIMULATION: Sending mock price drop to 0.05...")
+        yield json.dumps({
+            "event_type": "price_change",
+            "price_changes": [
+                {"asset_id": "MOCK_TOKEN_1", "side": "SELL", "price": "0.05", "size": "50"}
+            ]
+        })
+        # 3. Wait a bit, then simulate price going back up
+        await asyncio.sleep(5)
+        logger.info("SIMULATION: Removing mock price drop...")
+        yield json.dumps({
+            "event_type": "price_change",
+            "price_changes": [
+                {"asset_id": "MOCK_TOKEN_1", "side": "SELL", "price": "0.05", "size": "0"}
+            ]
+        })
+        # 4. Stay connected idly
+        while True:
+            await asyncio.sleep(60)
 
 class OrderBookMonitor:
     def __init__(self, alert_engine: AlertEngine, live_match_tracker: LiveMatchTracker, markets_changed_event: asyncio.Event):
@@ -395,7 +457,14 @@ class OrderBookMonitor:
 
             try:
                 logger.info(f"Connecting to WS with {len(token_ids)} tokens...")
-                async with websockets.connect(self.ws_url, ping_interval=10, ping_timeout=10) as ws:
+                
+                if SIMULATION_MODE:
+                    logger.info("SIMULATION: Using SimulatedWebsocket.")
+                    ws_context = SimulatedWebsocket()
+                else:
+                    ws_context = websockets.connect(self.ws_url, ping_interval=10, ping_timeout=10)
+
+                async with ws_context as ws:
                     await ws.send(json.dumps(subscription_message))
                     logger.info("Subscribed to market channels.")
                     
@@ -427,7 +496,7 @@ async def main():
     
     if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
         logger.warning("⚠️  Telegram credentials not configured — alerts will be logged only.")
-    if not API_FOOTBALL_KEY:
+    if not API_FOOTBALL_KEY and not SIMULATION_MODE:
         logger.error("❌ API-Football key is REQUIRED for live match detection. Exiting.")
         return
         
@@ -448,7 +517,7 @@ async def main():
                 hour = now_idt.hour
 
                 # Active window: 14:00 - 01:00 IDT (i.e., hour >= 14 OR hour < 1)
-                if hour >= 14 or hour < 1:
+                if SIMULATION_MODE or hour >= 14 or hour < 1:
                     await live_match_tracker.fetch_live()
                     live_teams = live_match_tracker.get_live_team_names()
 
