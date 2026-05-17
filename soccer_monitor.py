@@ -48,6 +48,7 @@ class MarketInfo:
     league: str
     market_question: str
     under_token_id: str
+    fixture_id: Optional[int] = None
 
 
 class LiveMatchTracker:
@@ -56,87 +57,162 @@ class LiveMatchTracker:
         self.api_key = API_FOOTBALL_KEY
         self.base_url = "https://v3.football.api-sports.io/"
         self.headers = {'x-apisports-key': self.api_key} if self.api_key else {}
-        self.live_fixtures = []
+        self.daily_fixtures = []  # List of {"fixture_id": int, "home_team": str, "away_team": str, "start_time": datetime}
+        self.last_fetch_date = None  # YYYY-MM-DD string
 
-    async def fetch_live(self):
-        """Fetches currently live fixtures for specified leagues."""
+    async def fetch_daily_schedule(self):
+        """Fetches daily schedule for today and tomorrow and filters locally."""
+        IDT = timezone(timedelta(hours=3))
+        now_idt = datetime.now(IDT)
+
         if SIMULATION_MODE:
-            self.live_fixtures = [{
-                "teams": {"home": {"name": "Mock FC"}, "away": {"name": "Simulator United"}},
-                "goals": {"home": 1, "away": 0},
-                "fixture": {"status": {"short": "2H", "elapsed": "65"}}
-            }]
-            logger.info("SIMULATION: Fetched mock live fixtures.")
+            now_utc = datetime.now(timezone.utc)
+            self.daily_fixtures = [
+                {
+                    "fixture_id": 123456,
+                    "home_team": "Mock FC",
+                    "away_team": "Simulator United",
+                    "start_time": now_utc - timedelta(minutes=10) # Started 10 minutes ago
+                }
+            ]
+            logger.info("SIMULATION: Populated mock daily schedule.")
+            self.last_fetch_date = now_idt.strftime('%Y-%m-%d')
             return
 
         if not self.api_key:
+            logger.error("API-Football key not configured. Cannot fetch daily schedule.")
             return
 
+        dates_to_fetch = [
+            now_idt.strftime('%Y-%m-%d'),
+            (now_idt + timedelta(days=1)).strftime('%Y-%m-%d')
+        ]
+
+        target_leagues = {39, 140, 135, 78, 61, 1}
+        fetched_fixtures = []
+
         try:
-            url = f"{self.base_url}fixtures"
-            # 39: Premier League, 140: La Liga, 135: Serie A, 78: Bundesliga, 61: Ligue 1, 1: World Cup
-            params = {'live': '39-140-135-78-61-1'}
-            async with self.session.get(url, headers=self.headers, params=params) as response:
-                if response.status != 200:
-                    logger.error(f"API-Football error: {response.status}")
-                    return
+            for date_str in dates_to_fetch:
+                url = f"{self.base_url}fixtures"
+                params = {'date': date_str}
+                logger.info(f"API-Football: Fetching global daily schedule for {date_str}...")
                 
-                data = await response.json()
-                self.live_fixtures = data.get("response", [])
-                
-                # Log API-Football limits
-                remaining = response.headers.get('x-ratelimit-requests-remaining', 'Unknown')
-                logger.info(f"Fetched {len(self.live_fixtures)} live fixtures from API-Football. Daily requests remaining: {remaining}")
+                async with self.session.get(url, headers=self.headers, params=params) as response:
+                    if response.status != 200:
+                        logger.error(f"API-Football error: {response.status}")
+                        continue
+                    
+                    data = await response.json()
+                    
+                    # API-Football may return 200 with an errors block inside the JSON
+                    api_errors = data.get("errors", {})
+                    if api_errors:
+                        logger.error(f"API-Football response errors: {api_errors}")
+                        continue
+
+                    fixtures_list = data.get("response", [])
+                    logger.info(f"Retrieved {len(fixtures_list)} total global fixtures for {date_str}.")
+
+                    for item in fixtures_list:
+                        league_info = item.get("league", {})
+                        league_id = league_info.get("id")
+                        if league_id in target_leagues:
+                            fixture_info = item.get("fixture", {})
+                            fixture_id = fixture_info.get("id")
+                            timestamp = fixture_info.get("timestamp")
+                            teams_info = item.get("teams", {})
+                            home_name = teams_info.get("home", {}).get("name", "")
+                            away_name = teams_info.get("away", {}).get("name", "")
+                            
+                            if fixture_id and timestamp and home_name and away_name:
+                                start_time_utc = datetime.fromtimestamp(timestamp, timezone.utc)
+                                fetched_fixtures.append({
+                                    "fixture_id": fixture_id,
+                                    "home_team": home_name,
+                                    "away_team": away_name,
+                                    "start_time": start_time_utc
+                                })
+
+            self.daily_fixtures = fetched_fixtures
+            logger.info(f"Successfully cached {len(self.daily_fixtures)} target league fixtures locally.")
+            self.last_fetch_date = now_idt.strftime('%Y-%m-%d')
 
         except Exception as e:
-            logger.error(f"Exception fetching live fixtures: {e}")
+            logger.error(f"Exception fetching daily schedule: {e}")
 
     def get_live_team_names(self) -> set:
-        """Returns a set of all team names currently playing."""
-        teams = set()
-        for fixture in self.live_fixtures:
-            teams.add(fixture.get("teams", {}).get("home", {}).get("name", ""))
-            teams.add(fixture.get("teams", {}).get("away", {}).get("name", ""))
-        # Remove empty strings if any
-        teams.discard("")
-        return teams
+        """Returns a set of all team names currently playing based on daily schedule."""
+        now_utc = datetime.now(timezone.utc)
+        live_teams = set()
+        active_count = 0
+        
+        for fixture in self.daily_fixtures:
+            start_time = fixture["start_time"]
+            # Active window: kickoff <= current_time <= kickoff + 150 minutes
+            end_time = start_time + timedelta(minutes=150)
+            if start_time <= now_utc <= end_time:
+                live_teams.add(fixture["home_team"])
+                live_teams.add(fixture["away_team"])
+                active_count += 1
+                
+        logger.info(f"Checked daily schedule. Found {active_count} active match(es) right now.")
+        return live_teams
 
-    def get_score(self, event_title: str) -> str:
-        """Fetches live score for a given event title using fuzzy matching against cached fixtures."""
+    async def fetch_live_score_on_demand(self, fixture_id: int) -> str:
+        """Queries API-Football for a single fixture's live score on demand."""
+        if SIMULATION_MODE:
+            if self.api_key == "SIMULATE_LIMIT":
+                return "[Error: API-Football daily quota of 100 calls reached]"
+            return "2-1 (65' 2H)"
+
         if not self.api_key:
             return "N/A (API-Football key not configured)"
 
-        if not self.live_fixtures:
-            return "No live fixtures cached"
-
-        best_match = None
-        best_ratio = 0.0
-
-        for fixture in self.live_fixtures:
-            teams = fixture.get("teams", {})
-            home = teams.get("home", {}).get("name", "")
-            away = teams.get("away", {}).get("name", "")
-            fixture_title = f"{home} vs {away}"
-            fixture_title_alt = f"{away} vs {home}"
+        try:
+            url = f"{self.base_url}fixtures"
+            params = {'id': str(fixture_id)}
             
-            # Check similarity
-            ratio1 = difflib.SequenceMatcher(None, event_title.lower(), fixture_title.lower()).ratio()
-            ratio2 = difflib.SequenceMatcher(None, event_title.lower(), fixture_title_alt.lower()).ratio()
-            max_ratio = max(ratio1, ratio2)
+            async with self.session.get(url, headers=self.headers, params=params) as response:
+                if response.status == 429:
+                    logger.warning("API-Football returned 429. Daily quota exceeded.")
+                    return "[Error: API-Football daily quota of 100 calls reached]"
+                
+                if response.status != 200:
+                    logger.error(f"API-Football score query HTTP error: {response.status}")
+                    return f"[Error: API-Football HTTP {response.status}]"
 
-            if max_ratio > best_ratio:
-                best_ratio = max_ratio
-                best_match = fixture
+                # Check rate limit headers
+                remaining = response.headers.get('x-ratelimit-requests-remaining')
+                if remaining == '0':
+                    logger.warning("API-Football requests remaining is 0. Daily quota reached.")
+                    return "[Error: API-Football daily quota of 100 calls reached]"
 
-        if best_match and best_ratio > 0.55:
-            goals = best_match.get("goals", {})
-            home_goals = goals.get("home", 0)
-            away_goals = goals.get("away", 0)
-            status = best_match.get("fixture", {}).get("status", {}).get("short", "")
-            elapsed = best_match.get("fixture", {}).get("status", {}).get("elapsed", "")
-            return f"{home_goals}-{away_goals} ({elapsed}' {status})"
-        else:
-            return "Match not found in live fixtures"
+                data = await response.json()
+                
+                api_errors = data.get("errors", {})
+                if api_errors:
+                    logger.warning(f"API-Football returned error: {api_errors}")
+                    error_str = str(api_errors).lower()
+                    if "limit" in error_str or "quota" in error_str or "request" in error_str:
+                        return "[Error: API-Football daily quota of 100 calls reached]"
+                    return f"[Error: API-Football - {api_errors}]"
+
+                fixtures = data.get("response", [])
+                if not fixtures:
+                    return "Match not found"
+
+                fixture_data = fixtures[0]
+                goals = fixture_data.get("goals", {})
+                home_goals = goals.get("home", 0)
+                away_goals = goals.get("away", 0)
+                status = fixture_data.get("fixture", {}).get("status", {}).get("short", "")
+                elapsed = fixture_data.get("fixture", {}).get("status", {}).get("elapsed", "")
+                
+                return f"{home_goals}-{away_goals} ({elapsed}' {status})"
+
+        except Exception as e:
+            logger.error(f"Exception fetching live score for fixture {fixture_id}: {e}")
+            return f"[Error: Exception - {str(e)}]"
 
 
 class AlertEngine:
@@ -145,16 +221,19 @@ class AlertEngine:
         self.bot_token = TELEGRAM_BOT_TOKEN
         self.chat_id = TELEGRAM_CHAT_ID
         self.last_alert_time: Dict[str, float] = {}
-        self.cooldown = ALERT_COOLDOWN
+        self.last_flush_date: Optional[str] = None
+
+    def clear_alert_history(self, date_str: str):
+        self.last_alert_time.clear()
+        self.last_flush_date = date_str
+        logger.info(f"New day detected: Alert history flushed for {date_str} at midnight IDT.")
 
     async def send_alert(self, market: MarketInfo, current_ask: float, score: str):
-        current_time = time.time()
         if market.under_token_id in self.last_alert_time:
-            if current_time - self.last_alert_time[market.under_token_id] < self.cooldown:
-                logger.debug(f"Alert for {market.event_title} on cooldown.")
-                return
+            logger.debug(f"Alert for {market.event_title} already sent today.")
+            return
 
-        self.last_alert_time[market.under_token_id] = current_time
+        self.last_alert_time[market.under_token_id] = time.time()
 
         message = (
             f"🚨 *UNDER PRICE DIP DETECTED*\n\n"
@@ -162,7 +241,7 @@ class AlertEngine:
             f"🏆 {market.league}\n"
             f"📊 Market: {market.market_question}\n"
             f"💰 Lowest ASK: ${current_ask:.3f}\n"
-            # f"🎯 Score: {score}\n"
+            f"🎯 Score: {score}\n"
             f"🔗 https://polymarket.com/event/{market.event_slug}"
         )
 
@@ -188,8 +267,9 @@ class AlertEngine:
 
 
 class MarketDiscovery:
-    def __init__(self, session: aiohttp.ClientSession):
+    def __init__(self, session: aiohttp.ClientSession, live_match_tracker: LiveMatchTracker):
         self.session = session
+        self.live_match_tracker = live_match_tracker
         self.base_url = "https://gamma-api.polymarket.com/events"
 
     def _event_has_live_team(self, event_title: str, live_teams: set) -> bool:
@@ -210,6 +290,43 @@ class MarketDiscovery:
                     return True
         return False
 
+    def find_matching_fixture_id(self, event_title: str) -> Optional[int]:
+        """Fuzzy matches Polymarket event title against cached daily fixtures to get fixture ID."""
+        if not self.live_match_tracker.daily_fixtures:
+            return None
+
+        parts = event_title.split(' vs. ')
+        if len(parts) != 2:
+            parts = event_title.split(' vs ')
+        if len(parts) != 2:
+            return None
+
+        parts = [p.strip().lower() for p in parts]
+        best_fixture_id = None
+        best_ratio = 0.0
+
+        for fixture in self.live_match_tracker.daily_fixtures:
+            home = fixture["home_team"].lower()
+            away = fixture["away_team"].lower()
+
+            ratio1 = max(
+                difflib.SequenceMatcher(None, parts[0], home).ratio(),
+                difflib.SequenceMatcher(None, parts[1], away).ratio()
+            )
+            ratio2 = max(
+                difflib.SequenceMatcher(None, parts[0], away).ratio(),
+                difflib.SequenceMatcher(None, parts[1], home).ratio()
+            )
+            max_ratio = max(ratio1, ratio2)
+
+            if max_ratio > best_ratio:
+                best_ratio = max_ratio
+                best_fixture_id = fixture["fixture_id"]
+
+        if best_ratio > 0.7:
+            return best_fixture_id
+        return None
+
     async def fetch_markets(self, live_teams: set) -> Dict[str, MarketInfo]:
         if SIMULATION_MODE:
             logger.info("SIMULATION: Returning mock markets.")
@@ -219,7 +336,8 @@ class MarketDiscovery:
                     event_slug="mock-fc-simulator-united",
                     league="Simulation League",
                     market_question="Will there be over 2.5 goals?",
-                    under_token_id="MOCK_TOKEN_1"
+                    under_token_id="MOCK_TOKEN_1",
+                    fixture_id=123456
                 )
             }
 
@@ -289,12 +407,14 @@ class MarketDiscovery:
                                         
                                         if under_idx != -1:
                                             under_token = token_list[under_idx]
+                                            fixture_id = self.find_matching_fixture_id(event_title)
                                             markets_dict[under_token] = MarketInfo(
                                                 event_title=event.get('title', 'Unknown Match'),
                                                 event_slug=event.get('slug', ''),
                                                 league=league,
                                                 market_question=market.get('question', ''),
-                                                under_token_id=under_token
+                                                under_token_id=under_token,
+                                                fixture_id=fixture_id
                                             )
                                 except json.JSONDecodeError as e:
                                     logger.warning(f"Malformed JSON in market '{market.get('question', '?')}': {e}")
@@ -375,9 +495,14 @@ class OrderBookMonitor:
         if not market:
             return
         
-        # Get score from cached API-Football data
-        # score = self.live_match_tracker.get_score(market.event_title)
-        await self.alert_engine.send_alert(market, current_ask, "")
+        score = "N/A"
+        if market.fixture_id:
+            score = await self.live_match_tracker.fetch_live_score_on_demand(market.fixture_id)
+        else:
+            logger.warning(f"No fixture ID found to query score for: {market.event_title}")
+            score = "Fixture not mapped"
+
+        await self.alert_engine.send_alert(market, current_ask, score)
 
     async def _process_event(self, data: dict):
         if not isinstance(data, dict):
@@ -503,8 +628,8 @@ async def main():
     markets_changed_event = asyncio.Event()
     
     async with aiohttp.ClientSession() as session:
-        discovery = MarketDiscovery(session)
         live_match_tracker = LiveMatchTracker(session)
+        discovery = MarketDiscovery(session, live_match_tracker)
         alert_engine = AlertEngine(session)
         monitor = OrderBookMonitor(alert_engine, live_match_tracker, markets_changed_event)
         
@@ -515,22 +640,32 @@ async def main():
             while True:
                 now_idt = datetime.now(IDT)
                 hour = now_idt.hour
+                current_date_str = now_idt.strftime('%Y-%m-%d')
 
-                # Active window: 14:00 - 01:00 IDT (i.e., hour >= 14 OR hour < 1)
-                if SIMULATION_MODE or hour >= 14 or hour < 1:
-                    await live_match_tracker.fetch_live()
+                # Flush alert history at midnight IDT
+                if alert_engine.last_flush_date != current_date_str:
+                    alert_engine.clear_alert_history(current_date_str)
+
+                # Active window: 13:00 - 01:00 IDT (i.e., hour >= 13 OR hour < 1)
+                if SIMULATION_MODE or hour >= 13 or hour < 1:
+                    # Fetch daily schedule only starting at 13:00 IDT
+                    if SIMULATION_MODE or hour >= 13:
+                        if live_match_tracker.last_fetch_date != current_date_str:
+                            logger.info("Daily schedule not fetched today. Fetching daily schedule...")
+                            await live_match_tracker.fetch_daily_schedule()
+
                     live_teams = live_match_tracker.get_live_team_names()
 
                     markets = await discovery.fetch_markets(live_teams)
                     await monitor.set_markets(markets)
                     await asyncio.sleep(POLL_INTERVAL_MARKETS)
                 else:
-                    # Outside match hours — clear markets and sleep until 14:00
-                    logger.info(f"Outside active hours ({now_idt.strftime('%H:%M')} IDT). Sleeping until 14:00 IDT...")
+                    # Outside match hours — clear markets and sleep until 13:00 IDT
+                    logger.info(f"Outside active hours ({now_idt.strftime('%H:%M')} IDT). Sleeping until 13:00 IDT...")
                     await monitor.set_markets({})
 
-                    # Calculate seconds until 14:00 IDT today
-                    next_start = now_idt.replace(hour=14, minute=0, second=0, microsecond=0)
+                    # Calculate seconds until 13:00 IDT today
+                    next_start = now_idt.replace(hour=13, minute=0, second=0, microsecond=0)
                     if next_start <= now_idt:
                         next_start += timedelta(days=1)
                     sleep_seconds = (next_start - now_idt).total_seconds()
