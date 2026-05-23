@@ -11,6 +11,7 @@ let
     websockets
     python-dotenv
     aiohttp
+    aiogram
   ]);
 in
 pkgs.mkShell {

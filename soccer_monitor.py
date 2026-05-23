@@ -7,6 +7,7 @@ import asyncio
 import json
 import logging
 import os
+import re
 import time
 import difflib
 from datetime import datetime, timezone, timedelta
@@ -19,6 +20,9 @@ import aiohttp
 import websockets
 # pyrefly: ignore [missing-import]
 from dotenv import load_dotenv
+
+from config_manager import RuntimeConfig
+from bot_ui import start_bot_polling
 
 # Load environment variables
 load_dotenv()
@@ -41,6 +45,29 @@ logging.basicConfig(
 logger = logging.getLogger("SoccerMonitor")
 
 
+def parse_goal_threshold(question: str) -> Optional[float]:
+    if not question:
+        return None
+    question_lower = question.lower()
+    
+    # Match pattern: under/over/o/u [number] total goals or [number] goals
+    match = re.search(r'(?:under|over|o/u|u/o)\s*(\d+(?:\.\d+)?)\s*total\s*goals?', question_lower)
+    if match:
+        return float(match.group(1))
+        
+    match = re.search(r'(?:under|over|o/u|u/o)\s*(\d+(?:\.\d+)?)\s*goals?', question_lower)
+    if match:
+        return float(match.group(1))
+        
+    # Fallback: any number if "goal" is mentioned
+    if "goal" in question_lower:
+        match = re.search(r'(\d+(?:\.\d+)?)', question_lower)
+        if match:
+            return float(match.group(1))
+            
+    return None
+
+
 @dataclass
 class MarketInfo:
     event_title: str
@@ -52,8 +79,9 @@ class MarketInfo:
 
 
 class LiveMatchTracker:
-    def __init__(self, session: aiohttp.ClientSession):
+    def __init__(self, session: aiohttp.ClientSession, runtime_config: RuntimeConfig):
         self.session = session
+        self.runtime_config = runtime_config
         self.api_key = API_FOOTBALL_KEY
         self.base_url = "https://v3.football.api-sports.io/"
         self.headers = {'x-apisports-key': self.api_key} if self.api_key else {}
@@ -88,7 +116,7 @@ class LiveMatchTracker:
             (now_idt + timedelta(days=1)).strftime('%Y-%m-%d')
         ]
 
-        target_leagues = {39, 140, 135, 78, 61, 1}
+        target_leagues = self.runtime_config.get_active_api_ids()
         fetched_fixtures = []
 
         try:
@@ -267,9 +295,10 @@ class AlertEngine:
 
 
 class MarketDiscovery:
-    def __init__(self, session: aiohttp.ClientSession, live_match_tracker: LiveMatchTracker):
+    def __init__(self, session: aiohttp.ClientSession, live_match_tracker: LiveMatchTracker, runtime_config: RuntimeConfig):
         self.session = session
         self.live_match_tracker = live_match_tracker
+        self.runtime_config = runtime_config
         self.base_url = "https://gamma-api.polymarket.com/events"
 
     def _event_has_live_team(self, event_title: str, live_teams: set) -> bool:
@@ -364,12 +393,13 @@ class MarketDiscovery:
                     events = await response.json()
                     if not events:
                         break
+
+                    allowed_leagues = self.runtime_config.get_active_polymarket_tags()
                     
                     for event in events:
                         tags = [tag.get('label', '') for tag in event.get('tags', [])]
                         lower_tags = [t.lower() for t in tags]
                         
-                        allowed_leagues = {"premier league", "epl", "la liga", "laliga", "serie a", "bundesliga", "ligue 1", "fifa world cup"}
                         if not any(al in lower_tags for al in allowed_leagues):
                             continue
 
@@ -475,10 +505,11 @@ class SimulatedWebsocket:
             await asyncio.sleep(60)
 
 class OrderBookMonitor:
-    def __init__(self, alert_engine: AlertEngine, live_match_tracker: LiveMatchTracker, markets_changed_event: asyncio.Event):
+    def __init__(self, alert_engine: AlertEngine, live_match_tracker: LiveMatchTracker, markets_changed_event: asyncio.Event, runtime_config: RuntimeConfig):
         self.ws_url = "wss://ws-subscriptions-clob.polymarket.com/ws/market"
         self.alert_engine = alert_engine
         self.live_match_tracker = live_match_tracker
+        self.runtime_config = runtime_config
         self.monitored_markets: Dict[str, MarketInfo] = {}
         self.book_state: Dict[str, Dict[float, float]] = {} # token_id -> {price: size}
         self.markets_lock = asyncio.Lock()
@@ -502,6 +533,26 @@ class OrderBookMonitor:
             logger.warning(f"No fixture ID found to query score for: {market.event_title}")
             score = "Fixture not mapped"
 
+        # Check for dead market threshold protection
+        if score and not score.startswith("[Error") and score != "N/A" and score != "Fixture not mapped":
+            # Parse goals scored so far
+            score_match = re.match(r'^(\d+)-(\d+)', score)
+            if score_match:
+                home_goals = int(score_match.group(1))
+                away_goals = int(score_match.group(2))
+                total_goals = home_goals + away_goals
+                
+                # Parse goal threshold from question
+                threshold = parse_goal_threshold(market.market_question)
+                if threshold is not None:
+                    if total_goals >= threshold:
+                        logger.info(
+                            f"Suppressing false dip alert for {market.event_title} ({market.market_question}). "
+                            f"Current score is {score} (total {total_goals} goals), which meets/exceeds the "
+                            f"threshold of {threshold}. Market is mathematically dead (Under outcome cannot win)."
+                        )
+                        return
+
         await self.alert_engine.send_alert(market, current_ask, score)
 
     async def _process_event(self, data: dict):
@@ -518,7 +569,13 @@ class OrderBookMonitor:
             if asset_id and asks:
                 self.book_state[asset_id] = {float(ask.get("price", "1.0")): float(ask.get("size", "0.0")) for ask in asks}
                 lowest_ask = min(self.book_state[asset_id].keys(), default=1.0)
-                if ASK_PRICE_MIN < lowest_ask < ASK_PRICE_THRESHOLD:
+                
+                market = self.monitored_markets.get(asset_id)
+                threshold = ASK_PRICE_THRESHOLD
+                if market:
+                    threshold = self.runtime_config.get_threshold(market.league)
+                
+                if ASK_PRICE_MIN < lowest_ask < threshold:
                     await self.process_dip(asset_id, lowest_ask)
 
         elif event_type == "price_change":
@@ -540,7 +597,13 @@ class OrderBookMonitor:
                         self.book_state[asset_id].pop(price, None)
                         
                     lowest_ask = min(self.book_state[asset_id].keys(), default=1.0)
-                    if ASK_PRICE_MIN < lowest_ask < ASK_PRICE_THRESHOLD:
+                    
+                    market = self.monitored_markets.get(asset_id)
+                    threshold = ASK_PRICE_THRESHOLD
+                    if market:
+                        threshold = self.runtime_config.get_threshold(market.league)
+                        
+                    if ASK_PRICE_MIN < lowest_ask < threshold:
                         await self.process_dip(asset_id, lowest_ask)
 
     async def _handle_message(self, message: str):
@@ -626,12 +689,13 @@ async def main():
         return
         
     markets_changed_event = asyncio.Event()
+    runtime_config = RuntimeConfig()
     
     async with aiohttp.ClientSession() as session:
-        live_match_tracker = LiveMatchTracker(session)
-        discovery = MarketDiscovery(session, live_match_tracker)
+        live_match_tracker = LiveMatchTracker(session, runtime_config)
+        discovery = MarketDiscovery(session, live_match_tracker, runtime_config)
         alert_engine = AlertEngine(session)
-        monitor = OrderBookMonitor(alert_engine, live_match_tracker, markets_changed_event)
+        monitor = OrderBookMonitor(alert_engine, live_match_tracker, markets_changed_event, runtime_config)
         
         async def discovery_loop():
             # IDT (Israel Daylight Time) is UTC+3
@@ -672,10 +736,11 @@ async def main():
                     logger.info(f"Resuming in {sleep_seconds/3600:.1f} hours.")
                     await asyncio.sleep(sleep_seconds)
                 
-        tasks = asyncio.gather(
-            discovery_loop(),
-            monitor.run()
-        )
+        gather_list = [discovery_loop(), monitor.run()]
+        if TELEGRAM_BOT_TOKEN:
+            gather_list.append(start_bot_polling(TELEGRAM_BOT_TOKEN, runtime_config, TELEGRAM_CHAT_ID))
+            
+        tasks = asyncio.gather(*gather_list)
         try:
             await tasks
         except asyncio.CancelledError:
