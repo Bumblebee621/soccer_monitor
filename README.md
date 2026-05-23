@@ -50,7 +50,6 @@ ALERT_COOLDOWN="1200"            # Seconds to wait before alerting again for the
 SIMULATION_MODE="0"              # Set to 1 to run mock data
 ```
 
-**Note on Telegram Privacy Mode**: Since the bot interacts via text input for thresholds, if you are running it in a group chat, you must disable Privacy Mode via `@BotFather` (`/setprivacy` -> Disable) so it can read your messages.
 
 ## Runtime Configuration via Telegram
 
