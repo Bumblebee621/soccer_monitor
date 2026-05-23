@@ -8,24 +8,24 @@ logger = logging.getLogger("ConfigManager")
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 SUPPORTED_LEAGUES = {    # Top 5 European Leagues
-    "Premier League": {"api_id": 39, "polymarket_tags": ["premier league", "epl"]},
-    "La Liga": {"api_id": 140, "polymarket_tags": ["la liga", "laliga"]},
-    "Serie A": {"api_id": 135, "polymarket_tags": ["serie a"]},
-    "Bundesliga": {"api_id": 78, "polymarket_tags": ["bundesliga"]},
-    "Ligue 1": {"api_id": 61, "polymarket_tags": ["ligue 1"]},
+    "Premier League": {"api_id": 39, "polymarket_tags": ["premier league", "epl"], "flag": "🏴󠁧󠁢󠁥󠁮󠁧󠁿"},
+    "La Liga": {"api_id": 140, "polymarket_tags": ["la liga", "laliga"], "flag": "🇪🇸"},
+    "Serie A": {"api_id": 135, "polymarket_tags": ["serie a"], "flag": "🇮🇹"},
+    "Bundesliga": {"api_id": 78, "polymarket_tags": ["bundesliga"], "flag": "🇩🇪"},
+    "Ligue 1": {"api_id": 61, "polymarket_tags": ["ligue 1"], "flag": "🇫🇷"},
     # International Tournaments
-    "World Cup": {"api_id": 1, "polymarket_tags": ["fifa world cup", "world cup"]},
-    "Euro Championship": {"api_id": 4, "polymarket_tags": ["euro", "european championship", "uefa euro"]},
+    "World Cup": {"api_id": 1, "polymarket_tags": ["fifa world cup", "world cup"], "flag": "🌐"},
+    "Euro Championship": {"api_id": 4, "polymarket_tags": ["euro", "european championship", "uefa euro"], "flag": "🇪🇺"},
     # UEFA Club Competitions
-    "Champions League": {"api_id": 2, "polymarket_tags": ["champions league", "ucl"]},
-    "Europa League": {"api_id": 3, "polymarket_tags": ["europa league"]},
-    "Conference League": {"api_id": 848, "polymarket_tags": ["conference league", "europa conference league"]},
+    "Champions League": {"api_id": 2, "polymarket_tags": ["champions league", "ucl"], "flag": "🇪🇺"},
+    "Europa League": {"api_id": 3, "polymarket_tags": ["europa league"], "flag": "🇪🇺"},
+    "Conference League": {"api_id": 848, "polymarket_tags": ["conference league", "europa conference league"], "flag": "🇪🇺"},
     # Domestic Cups
-    "FA Cup": {"api_id": 45, "polymarket_tags": ["fa cup"]},
-    "Carabao Cup": {"api_id": 48, "polymarket_tags": ["carabao cup", "efl cup", "league cup"]},
-    "Copa del Rey": {"api_id": 143, "polymarket_tags": ["copa del rey"]},
-    "DFB Pokal": {"api_id": 81, "polymarket_tags": ["dfb pokal", "dfb-pokal", "german cup"]},
-    "Coppa Italia": {"api_id": 137, "polymarket_tags": ["coppa italia", "italian cup"]},
+    "FA Cup": {"api_id": 45, "polymarket_tags": ["fa cup"], "flag": "🏴󠁧󠁢󠁥󠁮󠁧󠁿"},
+    "Carabao Cup": {"api_id": 48, "polymarket_tags": ["carabao cup", "efl cup", "league cup"], "flag": "🏴󠁧󠁢󠁥󠁮󠁧󠁿"},
+    "Copa del Rey": {"api_id": 143, "polymarket_tags": ["copa del rey"], "flag": "🇪🇸"},
+    "DFB Pokal": {"api_id": 81, "polymarket_tags": ["dfb pokal", "dfb-pokal", "german cup"], "flag": "🇩🇪"},
+    "Coppa Italia": {"api_id": 137, "polymarket_tags": ["coppa italia", "italian cup"], "flag": "🇮🇹"},
 }
 
 DEFAULT_ACTIVE_LEAGUES = [

@@ -63,7 +63,9 @@ def get_thresholds_menu_kb():
     # Leagues
     for league in config.active_leagues:
         t = config.league_thresholds.get(league)
-        text = f"{league}: {t:.3f}" if t is not None else f"{league}: Default"
+        flag = SUPPORTED_LEAGUES.get(league, {}).get("flag", "")
+        disp_name = f"{league} {flag}".strip()
+        text = f"{disp_name}: {t:.3f}" if t is not None else f"{disp_name}: Default"
         buttons.append([
             InlineKeyboardButton(text=f"{text}", callback_data=f"edit_thresh_{league}"),
             InlineKeyboardButton(text="🗑 Reset", callback_data=f"reset_thresh_{league}")
@@ -74,10 +76,12 @@ def get_thresholds_menu_kb():
 
 def get_leagues_menu_kb():
     buttons = []
-    for league in SUPPORTED_LEAGUES.keys():
+    for league, data in SUPPORTED_LEAGUES.items():
         is_active = league in config.active_leagues
         status = "✅" if is_active else "❌"
-        buttons.append([InlineKeyboardButton(text=f"{status} {league}", callback_data=f"toggle_league_{league}")])
+        flag = data.get("flag", "")
+        disp_name = f"{league} {flag}".strip()
+        buttons.append([InlineKeyboardButton(text=f"{status} {disp_name}", callback_data=f"toggle_league_{league}")])
         
     buttons.append([InlineKeyboardButton(text="⬅️ Back to Main Menu", callback_data="menu_main")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
@@ -135,7 +139,9 @@ async def cb_toggle_league(callback: CallbackQuery):
     league = callback.data.replace("toggle_league_", "")
     config.toggle_league(league)
     await callback.message.edit_reply_markup(reply_markup=get_leagues_menu_kb())
-    await callback.answer(f"Toggled {league}")
+    flag = SUPPORTED_LEAGUES.get(league, {}).get("flag", "")
+    disp_name = f"{league} {flag}".strip()
+    await callback.answer(f"Toggled {disp_name}")
 
 @router.callback_query(F.data == "edit_global_threshold")
 async def cb_edit_global_threshold(callback: CallbackQuery, state: FSMContext):
@@ -150,8 +156,10 @@ async def cb_edit_global_threshold(callback: CallbackQuery, state: FSMContext):
 async def cb_edit_league_threshold(callback: CallbackQuery, state: FSMContext):
     league = callback.data.replace("edit_thresh_", "")
     await state.update_data(target_league=league)
+    flag = SUPPORTED_LEAGUES.get(league, {}).get("flag", "")
+    disp_name = f"{league} {flag}".strip()
     await callback.message.edit_text(
-        f"Enter the new threshold for {league} ({THRESHOLD_MIN}–{THRESHOLD_MAX}).\nType /cancel to abort.",
+        f"Enter the new threshold for {disp_name} ({THRESHOLD_MIN}–{THRESHOLD_MAX}).\nType /cancel to abort.",
         reply_markup=None
     )
     await state.set_state(BotStates.waiting_for_league_threshold)
@@ -165,7 +173,9 @@ async def cb_reset_league_threshold(callback: CallbackQuery):
         await callback.message.edit_reply_markup(reply_markup=get_thresholds_menu_kb())
     except TelegramBadRequest:
         pass
-    await callback.answer(f"Reset {league} threshold to default.")
+    flag = SUPPORTED_LEAGUES.get(league, {}).get("flag", "")
+    disp_name = f"{league} {flag}".strip()
+    await callback.answer(f"Reset {disp_name} threshold to default.")
 
 @router.message(Command("cancel"))
 async def cmd_cancel(message: Message, state: FSMContext):
@@ -214,7 +224,9 @@ async def process_league_threshold(message: Message, state: FSMContext):
         if league:
             config.set_league_threshold(league, val)
             await state.clear()
-            await message.answer(f"✅ {league} threshold updated to {val:.3f}.", reply_markup=get_thresholds_menu_kb())
+            flag = SUPPORTED_LEAGUES.get(league, {}).get("flag", "")
+            disp_name = f"{league} {flag}".strip()
+            await message.answer(f"✅ {disp_name} threshold updated to {val:.3f}.", reply_markup=get_thresholds_menu_kb())
         else:
             await state.clear()
             await message.answer("Error: League not found. Type /menu to restart.")
