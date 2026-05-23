@@ -65,7 +65,7 @@ def get_thresholds_menu_kb():
         t = config.league_thresholds.get(league)
         text = f"{league}: {t:.3f}" if t is not None else f"{league}: Default"
         buttons.append([
-            InlineKeyboardButton(text=f"✏️ {text}", callback_data=f"edit_thresh_{league}"),
+            InlineKeyboardButton(text=f"{text}", callback_data=f"edit_thresh_{league}"),
             InlineKeyboardButton(text="🗑 Reset", callback_data=f"reset_thresh_{league}")
         ])
         
