@@ -177,6 +177,10 @@ async def cmd_cancel(message: Message, state: FSMContext):
 
 @router.message(BotStates.waiting_for_global_threshold)
 async def process_global_threshold(message: Message, state: FSMContext):
+    logger.info(f"process_global_threshold triggered, text={message.text!r}")
+    if not message.text:
+        await message.answer("Please send a number, or /cancel.")
+        return
     try:
         val = float(message.text.strip())
         error = validate_threshold(val)
@@ -188,9 +192,16 @@ async def process_global_threshold(message: Message, state: FSMContext):
         await message.answer("✅ Global threshold updated.", reply_markup=get_thresholds_menu_kb())
     except ValueError:
         await message.answer("Invalid number. Please try again, or /cancel.")
+    except Exception as e:
+        logger.error(f"Error in process_global_threshold: {e}", exc_info=True)
+        await message.answer(f"Unexpected error: {e}")
 
 @router.message(BotStates.waiting_for_league_threshold)
 async def process_league_threshold(message: Message, state: FSMContext):
+    logger.info(f"process_league_threshold triggered, text={message.text!r}")
+    if not message.text:
+        await message.answer("Please send a number, or /cancel.")
+        return
     try:
         val = float(message.text.strip())
         error = validate_threshold(val)
@@ -199,6 +210,7 @@ async def process_league_threshold(message: Message, state: FSMContext):
             return
         data = await state.get_data()
         league = data.get("target_league")
+        logger.info(f"Setting threshold for league={league!r} to {val}")
         if league:
             config.set_league_threshold(league, val)
             await state.clear()
@@ -208,6 +220,20 @@ async def process_league_threshold(message: Message, state: FSMContext):
             await message.answer("Error: League not found. Type /menu to restart.")
     except ValueError:
         await message.answer("Invalid number. Please try again, or /cancel.")
+    except Exception as e:
+        logger.error(f"Error in process_league_threshold: {e}", exc_info=True)
+        await message.answer(f"Unexpected error: {e}")
+
+
+@router.message()
+async def catch_all_message(message: Message, state: FSMContext):
+    """Debug: catches any message that didn't match another handler."""
+    current_state = await state.get_state()
+    logger.warning(
+        f"catch_all_message: text={message.text!r}, state={current_state}, "
+        f"chat_id={message.chat.id}, from_id={message.from_user.id}"
+    )
+
 
 async def start_bot_polling(bot_token: str, runtime_config: RuntimeConfig, chat_id: Optional[str]):
     global config, allowed_chat_id
