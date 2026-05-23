@@ -80,8 +80,8 @@ def get_leagues_menu_kb():
         is_active = league in config.active_leagues
         status = "✅" if is_active else "❌"
         flag = data.get("flag", "")
-        disp_name = f"{league} {flag}".strip()
-        buttons.append([InlineKeyboardButton(text=f"{status} {disp_name}", callback_data=f"toggle_league_{league}")])
+        disp_name = f"{league}   {flag}".strip()
+        buttons.append([InlineKeyboardButton(text=f"{status}   {disp_name}", callback_data=f"toggle_league_{league}")])
         
     buttons.append([InlineKeyboardButton(text="⬅️ Back to Main Menu", callback_data="menu_main")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)

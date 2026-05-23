@@ -57,7 +57,7 @@ cd /home/ariel25621/soccer_monitor
 
 ### Step 2: Pull the Latest Code from GitHub
 ```bash
-git pull origin main
+git pull
 ```
 
 ### Step 3: Restart the Daemon to Load the New Code
