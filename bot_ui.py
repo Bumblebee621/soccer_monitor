@@ -108,8 +108,15 @@ async def cb_menu_main(callback: CallbackQuery, state: FSMContext):
 @router.callback_query(F.data == "menu_close")
 async def cb_menu_close(callback: CallbackQuery, state: FSMContext):
     await state.clear()
-    await callback.message.delete()
-    await callback.answer()
+    try:
+        await callback.answer()
+    except TelegramBadRequest:
+        pass
+    
+    try:
+        await callback.message.delete()
+    except TelegramBadRequest:
+        pass
 
 @router.callback_query(F.data == "menu_status")
 async def cb_menu_status(callback: CallbackQuery):
