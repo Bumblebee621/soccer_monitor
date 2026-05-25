@@ -10,6 +10,7 @@ import os
 import re
 import time
 import difflib
+import html
 from datetime import datetime, timezone, timedelta
 from dataclasses import dataclass
 from typing import Dict, List, Optional
@@ -231,8 +232,8 @@ class LiveMatchTracker:
 
                 fixture_data = fixtures[0]
                 goals = fixture_data.get("goals", {})
-                home_goals = goals.get("home", 0)
-                away_goals = goals.get("away", 0)
+                home_goals = goals.get("home") or 0
+                away_goals = goals.get("away") or 0
                 status = fixture_data.get("fixture", {}).get("status", {}).get("short", "")
                 elapsed = fixture_data.get("fixture", {}).get("status", {}).get("elapsed", "")
                 
@@ -264,12 +265,12 @@ class AlertEngine:
         self.last_alert_time[market.under_token_id] = time.time()
 
         message = (
-            f"🚨 *UNDER PRICE DIP DETECTED*\n\n"
-            f"⚽ *{market.event_title}*\n"
-            f"🏆 {market.league}\n"
-            f"📊 Market: {market.market_question}\n"
+            f"🚨 <b>UNDER PRICE DIP DETECTED</b>\n\n"
+            f"⚽ <b>{html.escape(market.event_title)}</b>\n"
+            f"🏆 {html.escape(market.league)}\n"
+            f"📊 Market: {html.escape(market.market_question)}\n"
             f"💰 Lowest ASK: ${current_ask:.3f}\n"
-            f"🎯 Score: {score}\n"
+            f"🎯 Score: {html.escape(score)}\n"
             f"🔗 https://polymarket.com/event/{market.event_slug}"
         )
 
@@ -281,7 +282,7 @@ class AlertEngine:
                 payload = {
                     "chat_id": self.chat_id,
                     "text": message,
-                    "parse_mode": "Markdown"
+                    "parse_mode": "HTML"
                 }
                 async with self.session.post(url, json=payload) as response:
                     if response.status != 200:
@@ -441,8 +442,8 @@ class MarketDiscovery:
                                     continue
                                 
                                 try:
-                                    token_list = json.loads(tokens)
-                                    outcome_list = json.loads(outcomes)
+                                    token_list = tokens if isinstance(tokens, list) else json.loads(tokens)
+                                    outcome_list = outcomes if isinstance(outcomes, list) else json.loads(outcomes)
                                     if len(token_list) == len(outcome_list):
                                         under_idx = -1
                                         for idx, outcome in enumerate(outcome_list):
