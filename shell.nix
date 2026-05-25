@@ -21,7 +21,6 @@ pkgs.mkShell {
 
   shellHook = ''
     echo "PolyMarket Data Science Environment"
-    echo "Python version: $(python --version)"
     echo "Available packages: requests, pandas, numpy, matplotlib, scipy, sklearn"
   '';
 }

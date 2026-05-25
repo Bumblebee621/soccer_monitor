@@ -1,19 +1,20 @@
 import requests
 import pandas as pd
+# pyrefly: ignore [missing-import]
 import matplotlib.pyplot as plt
 import datetime
 
 # 1. Configuration
-EVENT_QUERY = "Bologna"
-TEAM_2_QUERY = "Inter"
-MARKET_QUERY = "3.5"
+EVENT_QUERY = "Chelsea"
+TEAM_2_QUERY = "Tottenham"
+MARKET_QUERY = "O/U 2.5"
 
 # If the search fails, paste the slug from the Polymarket URL here:
 # Example: "bologna-vs-inter-milano-may-23"
-EVENT_SLUG = ""
+EVENT_SLUG = "epl-che-tot-2026-05-19-more-markets"
 
-CSV_FILENAME = "bologna_inter_ou35_history.csv"
-PLOT_FILENAME = "bologna_inter_ou35_plot.png"
+CSV_FILENAME = "che_tot_history.csv"
+PLOT_FILENAME = "che_tot_plot.png"
 
 def fetch_market_info():
     """Finds the event and market on Polymarket."""
@@ -47,15 +48,33 @@ def fetch_market_info():
                     return m
     return None
 
-def fetch_price_history(condition_id):
+def fetch_price_history(token_id):
     """Fetches the historical price data from the CLOB."""
-    print(f"Fetching price history for condition ID: {condition_id}")
+    print(f"Fetching price history for token ID: {token_id}")
     url = "https://clob.polymarket.com/prices-history"
     
-    # interval=all gets the maximum available history for the market
+    # First, get the last available timestamp for this market
+    params_all = {
+        'market': token_id,
+        'interval': 'all'
+    }
+    r_all = requests.get(url, params=params_all)
+    if r_all.status_code != 200:
+        print(f"Error fetching history: {r_all.status_code} - {r_all.text}")
+        return []
+        
+    history_all = r_all.json().get('history', [])
+    if not history_all:
+        return []
+        
+    last_t = history_all[-1]['t']
+    start_ts = last_t - 4 * 3600
+    
     params = {
-        'interval': 'all',
-        'market': condition_id
+        'startTs': start_ts,
+        'endTs': last_t,
+        'fidelity': 1,
+        'market': token_id
     }
     
     r = requests.get(url, params=params)
@@ -92,8 +111,8 @@ def process_and_plot(history_data, market_info):
     
     # Plot
     plt.figure(figsize=(12, 6))
-    plt.plot(df['datetime'], df['price_over'], label='Over 3.5', color='blue', linewidth=2)
-    plt.plot(df['datetime'], df['price_under'], label='Under 3.5', color='red', linewidth=2)
+    plt.plot(df['datetime'], df['price_over'], label='Outcome 1 (Yes/Over)', color='blue', linewidth=2)
+    plt.plot(df['datetime'], df['price_under'], label='Outcome 2 (No/Under)', color='red', linewidth=2)
     
     plt.title(f"Polymarket Price History\n{market_info.get('question')}")
     plt.xlabel('Date/Time (UTC)')
@@ -117,12 +136,20 @@ def main():
         print("Could not find the specified market. The event might have expired or the name might be slightly different.")
         return
         
-    condition_id = market_info.get('conditionId')
-    if not condition_id:
-        print("Market missing conditionId.")
+    import json
+    clob_tokens_str = market_info.get('clobTokenIds')
+    if not clob_tokens_str:
+        print("Market missing clobTokenIds.")
         return
         
-    history = fetch_price_history(condition_id)
+    clob_tokens = json.loads(clob_tokens_str)
+    if not clob_tokens:
+        print("Empty clobTokenIds.")
+        return
+        
+    token_id = clob_tokens[0]
+    
+    history = fetch_price_history(token_id)
     process_and_plot(history, market_info)
 
 if __name__ == "__main__":
