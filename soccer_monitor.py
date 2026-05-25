@@ -322,9 +322,16 @@ class MarketDiscovery:
         parts = clean_title.split(' vs. ')
         if len(parts) != 2:
             parts = clean_title.split(' vs ')
+            
+        if len(parts) != 2:
+            return False
         
         for part in parts:
             poly_team = part.strip()
+            
+            if poly_team not in team_mapping:
+                logger.debug(f"Unmapped Polymarket team checked: '{poly_team}'")
+                
             # Try to get the API-Football equivalent from our deterministic mapping
             api_team = team_mapping.get(poly_team, poly_team)
             
