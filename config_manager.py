@@ -14,7 +14,7 @@ SUPPORTED_LEAGUES = {    # Top 5 European Leagues
     "Bundesliga": {"api_id": 78, "polymarket_tags": ["bundesliga"], "flag": "🇩🇪"},
     "Ligue 1": {"api_id": 61, "polymarket_tags": ["ligue 1"], "flag": "🇫🇷"},
     # International Tournaments
-    "World Cup": {"api_id": 1, "polymarket_tags": ["fifa world cup", "world cup"], "flag": "🌐"},
+    "World Cup": {"api_id": 1, "polymarket_tags": ["fifa world cup", "world cup"], "flag": "🌍"},
     "Euro Championship": {"api_id": 4, "polymarket_tags": ["euro", "european championship", "uefa euro"], "flag": "🇪🇺"},
     # UEFA Club Competitions
     "Champions League": {"api_id": 2, "polymarket_tags": ["champions league", "ucl"], "flag": "🇪🇺"},
