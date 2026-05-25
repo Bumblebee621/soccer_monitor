@@ -301,59 +301,66 @@ class MarketDiscovery:
         self.runtime_config = runtime_config
         self.base_url = "https://gamma-api.polymarket.com/events"
 
-    def _event_has_live_team(self, event_title: str, live_teams: set) -> bool:
-        """Checks if any team in the event title fuzzy matches a live team."""
+    def load_team_mapping(self) -> Dict[str, str]:
+        if os.path.exists("team_mapping.json"):
+            try:
+                with open("team_mapping.json", "r") as f:
+                    return json.load(f)
+            except Exception as e:
+                logger.error(f"Error loading team_mapping.json: {e}")
+        return {}
+
+    def _event_has_live_team(self, event_title: str, live_teams: set, team_mapping: Dict[str, str]) -> bool:
+        """Checks if any mapped team in the event title matches a live team exactly."""
         if not live_teams:
             return False
             
+        # Strip out side-market suffixes (e.g., " - Exact Score")
+        clean_title = event_title.split(' - ')[0]
+            
         # Split "Team A vs. Team B"
-        parts = event_title.split(' vs. ')
+        parts = clean_title.split(' vs. ')
         if len(parts) != 2:
-            parts = event_title.split(' vs ')
+            parts = clean_title.split(' vs ')
         
         for part in parts:
-            part = part.strip().lower()
-            for live_team in live_teams:
-                # Basic fuzzy match
-                if difflib.SequenceMatcher(None, part, live_team.lower()).ratio() > 0.7:
-                    return True
+            poly_team = part.strip()
+            # Try to get the API-Football equivalent from our deterministic mapping
+            api_team = team_mapping.get(poly_team, poly_team)
+            
+            if api_team in live_teams:
+                return True
+                
         return False
 
-    def find_matching_fixture_id(self, event_title: str) -> Optional[int]:
-        """Fuzzy matches Polymarket event title against cached daily fixtures to get fixture ID."""
+    def find_matching_fixture_id(self, event_title: str, team_mapping: Dict[str, str]) -> Optional[int]:
+        """Matches Polymarket event title against cached daily fixtures deterministically using the mapping."""
         if not self.live_match_tracker.daily_fixtures:
             return None
 
-        parts = event_title.split(' vs. ')
+        # Strip out side-market suffixes (e.g., " - Exact Score")
+        clean_title = event_title.split(' - ')[0]
+
+        parts = clean_title.split(' vs. ')
         if len(parts) != 2:
-            parts = event_title.split(' vs ')
+            parts = clean_title.split(' vs ')
         if len(parts) != 2:
             return None
 
-        parts = [p.strip().lower() for p in parts]
-        best_fixture_id = None
-        best_ratio = 0.0
+        poly_home = parts[0].strip()
+        poly_away = parts[1].strip()
+        
+        api_home = team_mapping.get(poly_home, poly_home)
+        api_away = team_mapping.get(poly_away, poly_away)
 
         for fixture in self.live_match_tracker.daily_fixtures:
-            home = fixture["home_team"].lower()
-            away = fixture["away_team"].lower()
+            f_home = fixture["home_team"]
+            f_away = fixture["away_team"]
 
-            ratio1 = max(
-                difflib.SequenceMatcher(None, parts[0], home).ratio(),
-                difflib.SequenceMatcher(None, parts[1], away).ratio()
-            )
-            ratio2 = max(
-                difflib.SequenceMatcher(None, parts[0], away).ratio(),
-                difflib.SequenceMatcher(None, parts[1], home).ratio()
-            )
-            max_ratio = max(ratio1, ratio2)
+            # Exact match (order doesn't matter)
+            if (api_home == f_home and api_away == f_away) or (api_home == f_away and api_away == f_home):
+                return fixture["fixture_id"]
 
-            if max_ratio > best_ratio:
-                best_ratio = max_ratio
-                best_fixture_id = fixture["fixture_id"]
-
-        if best_ratio > 0.7:
-            return best_fixture_id
         return None
 
     async def fetch_markets(self, live_teams: set) -> Dict[str, MarketInfo]:
@@ -371,6 +378,7 @@ class MarketDiscovery:
             }
 
         logger.info("Fetching active soccer markets from Gamma API...")
+        team_mapping = self.load_team_mapping()
         markets_dict = {}
         skipped_not_live = 0
         
@@ -404,7 +412,7 @@ class MarketDiscovery:
                             continue
 
                         event_title = event.get('title', 'Unknown Match')
-                        if not self._event_has_live_team(event_title, live_teams):
+                        if not self._event_has_live_team(event_title, live_teams, team_mapping):
                             skipped_not_live += 1
                             continue
 
@@ -437,7 +445,7 @@ class MarketDiscovery:
                                         
                                         if under_idx != -1:
                                             under_token = token_list[under_idx]
-                                            fixture_id = self.find_matching_fixture_id(event_title)
+                                            fixture_id = self.find_matching_fixture_id(event_title, team_mapping)
                                             markets_dict[under_token] = MarketInfo(
                                                 event_title=event.get('title', 'Unknown Match'),
                                                 event_slug=event.get('slug', ''),

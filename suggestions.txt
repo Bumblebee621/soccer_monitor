@@ -1,0 +1,954 @@
+Polymarket Team: 'Lincoln City FC'
+Suggestions: AD Ceuta FC, Accrington ST, Albion Sports, Ashington AFC, Bath City
+Enter API-Football name for 'Lincoln City FC' (or press ENTER to skip): 
+
+Polymarket Team: 'Blackburn Rovers FC'
+Suggestions: AEK Athens FC, AFC Kempston Rovers, Abbey Rangers, Atherton Collieries, Aurrerá Vitoria
+Enter API-Football name for 'Blackburn Rovers FC' (or press ENTER to skip): 
+
+Polymarket Team: 'Hampton & Richmond Borough FC'
+Suggestions: Barton Town Old Boys, Bournemouth FC, Crowborough Athletic, Dagenham & Redbridge, Eastbourne Borough
+Enter API-Football name for 'Hampton & Richmond Borough FC' (or press ENTER to skip): 
+
+Polymarket Team: 'UD Mutilvera'
+Suggestions: AC Milan, AD Ceuta FC, Almeria, Austria, Badshot Lea
+Enter API-Football name for 'UD Mutilvera' (or press ENTER to skip): 
+
+Polymarket Team: 'Real Sporting de Gijón'
+Suggestions: Albion Sports, Basingstoke Town, Borussia Dortmund, Brightlingsea Regent, Bromsgrove Sporting
+Enter API-Football name for 'Real Sporting de Gijón' (or press ENTER to skip): 
+
+Polymarket Team: 'Europa League: Olympiacos'
+Suggestions: Aylesbury Vale Dynamos, Europa Fc, Metropolitan Police, Olympiakos Piraeus, Parla Escuela
+Enter API-Football name for 'Europa League: Olympiacos' (or press ENTER to skip): 
+
+Polymarket Team: 'FA Cup: Coventry City'
+Suggestions: Andover New Street, Bath City, CD Coria, Carlisle City, Chelmsford City
+Enter API-Football name for 'FA Cup: Coventry City' (or press ENTER to skip): 
+
+Polymarket Team: 'RC Ferrol'
+Suggestions: AFC Emley, AFC Fylde, AFC Liverpool, AFC Mansfield, Barcelona
+Enter API-Football name for 'RC Ferrol' (or press ENTER to skip): 
+
+Polymarket Team: 'Wolverhampton Wanderers FC'
+Suggestions: AFC Kempston Rovers, Alfreton Town, Amersham Town, Ashington AFC, Atherton Collieries
+Enter API-Football name for 'Wolverhampton Wanderers FC' (or press ENTER to skip): 
+
+Polymarket Team: 'CDA Navalcarnero'
+Suggestions: 1. FC Nürnberg, AEK Larnaca, AFC Liverpool, AZ Alkmaar, Alcorcon
+Enter API-Football name for 'CDA Navalcarnero' (or press ENTER to skip): 
+
+Polymarket Team: 'CA Antoniano'
+Suggestions: AFC Stoneham, AFC Totton, AFC Wulfrunians, Albania, Alton Town
+Enter API-Football name for 'CA Antoniano' (or press ENTER to skip): 
+
+Polymarket Team: 'UEL: FCSB'
+Suggestions: Apoel Nicosia, Bournemouth FC, Crusaders FC, Elche, Ely City
+Enter API-Football name for 'UEL: FCSB' (or press ENTER to skip): 
+
+Polymarket Team: 'DSC Arminia Bielefeld'
+Suggestions: AFC Mansfield, AFC Wimbledon, Arminia Bielefeld, Ascot United, Binfield
+Enter API-Football name for 'DSC Arminia Bielefeld' (or press ENTER to skip): 
+
+Polymarket Team: 'Copa del Rey: Leganés'
+Suggestions: Abbey Rangers, Ardley United, Camberley Town, Canvey Island, Cherno More Varna
+Enter API-Football name for 'Copa del Rey: Leganés' (or press ENTER to skip): 
+
+Polymarket Team: 'AEK'
+Suggestions: AEK Larnaca, Aktobe, Alaves, Angers, Aveley
+Enter API-Football name for 'AEK' (or press ENTER to skip): 
+
+Polymarket Team: 'RKS Raków Częstochowa'
+Suggestions: Brackley Town, Crawley Town, Hansa Rostock, Potters Bar Town, Worksop Town
+Enter API-Football name for 'RKS Raków Częstochowa' (or press ENTER to skip): 
+
+Polymarket Team: 'CD Cieza'
+Suggestions: AC Milan, AD Ceuta FC, Badshot Lea, CD Coria, Cadiz
+Enter API-Football name for 'CD Cieza' (or press ENTER to skip): 
+
+Polymarket Team: 'CD Mirandés'
+Suggestions: AC Milan, AFC Mansfield, AFC Rushden & Diamonds, AFC Wulfrunians, Abbey Rangers
+Enter API-Football name for 'CD Mirandés' (or press ENTER to skip): 
+
+Polymarket Team: 'Roma (1st Leg)'
+Suggestions: AFC Dunstable, Bromley, Bromsgrove Sporting, Compostela, Crystal Palace
+Enter API-Football name for 'Roma (1st Leg)' (or press ENTER to skip): 
+
+Polymarket Team: 'CD Quintanar del Rey'
+Suggestions: AFC Dunstable, AFC Emley, Andover New Street, Catanzaro, Ceuta 6 de Junio
+Enter API-Football name for 'CD Quintanar del Rey' (or press ENTER to skip): 
+
+Polymarket Team: 'Grimsby Town FC'
+Suggestions: Accrington ST, Aldershot Town, Alfreton Town, Amersham Town, Arlesey Town
+Enter API-Football name for 'Grimsby Town FC' (or press ENTER to skip): 
+
+Polymarket Team: 'Europa League: Union Saint-Gilloise'
+
+Suggestions: Heaton Stannington, Paris Saint Germain, The New Saints, Union St. Gilloise
+Enter API-Football name for 'Europa League: Union Saint-Gilloise' (or press ENTER to skip): 
+Polymarket Team: 'Puerto de Vega CF'
+Suggestions: Bemerton Heath Harleq., Broadbridge Heath, Cherno More Varna, Ciudad de Lucena, Deportivo La Coruna
+Enter API-Football name for 'Puerto de Vega CF' (or press ENTER to skip): 
+
+Polymarket Team: 'Real Murcia CF'
+Suggestions: AC Milan, Alemannia Aachen, Almeria, Alvechurch, Apoel Nicosia
+Enter API-Football name for 'Real Murcia CF' (or press ENTER to skip): 
+
+Polymarket Team: 'Europa League: Maccabi TLV'
+Suggestions: Europa Fc, Maccabi Haifa, Maccabi Petah Tikva, Maccabi Tel Aviv, Reading City
+Enter API-Football name for 'Europa League: Maccabi TLV' (or press ENTER to skip): 
+
+Polymarket Team: 'CD Numancia'
+Suggestions: AC Milan, AD Ceuta FC, AFC Mansfield, Albania, Apoel Nicosia
+Enter API-Football name for 'CD Numancia' (or press ENTER to skip): 
+
+Polymarket Team: 'Wolverhampton'
+Suggestions: AFC Liverpool, Aldershot Town, Altrincham, Alvechurch, Amersham Town
+Enter API-Football name for 'Wolverhampton' (or press ENTER to skip): 
+
+Polymarket Team: 'FC Lorient'
+Suggestions: 1. FC Heidenheim, 1. FC Köln, 1. FC Nürnberg, AC Milan, AFC Dunstable
+Enter API-Football name for 'FC Lorient' (or press ENTER to skip): 
+
+Polymarket Team: 'UEL: Ferencvaros'
+Suggestions: AFC Wulfrunians, Alfaro, Alfreton Town, Apoel Nicosia, Eldense
+Enter API-Football name for 'UEL: Ferencvaros' (or press ENTER to skip): 
+
+Polymarket Team: 'Kuopion PS'
+Suggestions: AFC Kempston Rovers, Accrington ST, Albion Sports, Bedfont Sports, Burton Albion
+Enter API-Football name for 'Kuopion PS' (or press ENTER to skip): 
+
+Polymarket Team: 'CD Valle de Egüés'
+Suggestions: Aylesbury Vale Dynamos, Ciudad de Lucena, Crawley Down Gatwick, Crawley Green, Cray Valley PM
+Enter API-Football name for 'CD Valle de Egüés' (or press ENTER to skip): 
+
+Polymarket Team: 'Doncaster Rovers FC'
+Suggestions: AFC Kempston Rovers, Abbey Rangers, Anstey Nomads, Baffins Milton Rovers, Barton Rovers
+Enter API-Football name for 'Doncaster Rovers FC' (or press ENTER to skip): 
+
+Polymarket Team: 'Europa League: Besiktas'
+Suggestions: Cultural Leonesa, Europa Fc, GO Ahead Eagles, Hereford Pegasus, Newcastle Blue Star
+Enter API-Football name for 'Europa League: Besiktas' (or press ENTER to skip): 
+
+Polymarket Team: 'Monchengladbach'
+Suggestions: AFC Hornchurch, Bayern München, Borussia Mönchengladbach, Chelsea, Chiclana
+Enter API-Football name for 'Monchengladbach' (or press ENTER to skip): 
+
+Polymarket Team: 'Huddersfield Town AFC'
+Suggestions: Aldershot Town, Amersham Town, Arlesey Town, Ashington AFC, Atherstone Town
+Enter API-Football name for 'Huddersfield Town AFC' (or press ENTER to skip): 
+
+Polymarket Team: 'Málaga CF'
+Suggestions: Granada CF, Lancaster City, Maccabi Haifa, Malaga, Malmo FF
+Enter API-Football name for 'Málaga CF' (or press ENTER to skip): 
+
+Polymarket Team: 'Europa League: Fenerbahce'
+Suggestions: Crawley Green, Cray Wanderers, Cultural Leonesa, Europa Fc, Fenerbahçe
+Enter API-Football name for 'Europa League: Fenerbahce' (or press ENTER to skip): 
+
+Polymarket Team: 'Europa League: Union St-Gilloise'
+
+Suggestions: Ceuta 6 de Junio, Eastbourne United, Ebbsfleet United, Hadleigh United, Hayes & Yeading United
+Enter API-Football name for 'Europa League: Union St-Gilloise' (or press ENTER to skip): 
+Polymarket Team: 'Stade Rennais FC 1901'
+Suggestions: AEK Athens FC, AEK Larnaca, Austria Vienna, Crusaders FC, Extremadura 1924
+Enter API-Football name for 'Stade Rennais FC 1901' (or press ENTER to skip): 
+
+Polymarket Team: 'Club Portugalete'
+Suggestions: AFC Portchester, AFC Telford United, Albacete, Albion Sports, Atlètic Club d'Escaldes
+Enter API-Football name for 'Club Portugalete' (or press ENTER to skip): 
+
+Polymarket Team: 'Europa League: Athletic Bilbao'
+Suggestions: AFC Croydon Athletic, Athletic Club, Athletic Newham, Atlético Paso, Brantham Athletic
+Enter API-Football name for 'Europa League: Athletic Bilbao' (or press ENTER to skip): 
+
+Polymarket Team: 'Sheffield United FC'
+Suggestions: AD Ceuta FC, AFC Telford United, Ardley United, Ascot United, Ashford United
+Enter API-Football name for 'Sheffield United FC' (or press ENTER to skip): 
+
+Polymarket Team: 'Real Oviedo'
+Suggestions: AFC Mansfield, AFC Wimbledon, Alaves, Alcorcon, Apoel Nicosia
+Enter API-Football name for 'Real Oviedo' (or press ENTER to skip): 
+
+Polymarket Team: 'Serie A: Roma'
+Suggestions: AS Roma, Anstey Nomads, British Airways, Cherno More Varna, Deportivo La Coruna
+Enter API-Football name for 'Serie A: Roma' (or press ENTER to skip): 
+
+Polymarket Team: 'Torrent CF'
+Suggestions: AEK Athens FC, Ashington AFC, Athletic Club, Brentford, Brentwood Town
+Enter API-Football name for 'Torrent CF' (or press ENTER to skip): 
+
+Polymarket Team: 'RC Deportivo La Coruña'
+Suggestions: AFC Portchester, CD Coria, Cherno More Varna, Deportiva Minera, Deportivo La Coruna
+Enter API-Football name for 'RC Deportivo La Coruña' (or press ENTER to skip): 
+
+Polymarket Team: 'Colchester United FC'
+Suggestions: AFC Portchester, AFC Telford United, Ardley United, Ascot United, Ashford United
+Enter API-Football name for 'Colchester United FC' (or press ENTER to skip): 
+
+Polymarket Team: 'AZ'
+Suggestions: Baztán, Cadiz, Lazio
+Enter API-Football name for 'AZ' (or press ENTER to skip): 
+
+Polymarket Team: 'Cardiff City (To Advance)'
+Suggestions: Ashford Town (Middlesex), Baffins Milton Rovers, Camberley Town, Cambridge City, Cardiff
+Enter API-Football name for 'Cardiff City (To Advance)' (or press ENTER to skip): 
+
+Polymarket Team: 'RFS'
+Suggestions: Angers, Burgos, Cortes, Cribbs, FCSB
+Enter API-Football name for 'RFS' (or press ENTER to skip): 
+
+Polymarket Team: 'Europa League: FCSB'
+Suggestions: Atherton Collieries, Bournemouth FC, Europa Fc, GO Ahead Eagles, Hallescher FC
+Enter API-Football name for 'Europa League: FCSB' (or press ENTER to skip): 
+
+Polymarket Team: 'CD Getxo'
+Suggestions: AD Ceuta FC, AFC Totton, CD Coria, Cambridge City, Cambridge United
+Enter API-Football name for 'CD Getxo' (or press ENTER to skip): 
+
+Polymarket Team: 'Plymouth Argyle FC'
+Suggestions: AD Ceuta FC, Bemerton Heath Harleq., Blyth Spartans, Bournemouth FC, Cliftonville FC
+Enter API-Football name for 'Plymouth Argyle FC' (or press ENTER to skip): 
+
+Polymarket Team: 'Queens Park Rangers FC'
+Suggestions: Abbey Rangers, Angers, Boro Rangers, Bradford (Park Avenue), Concord Rangers
+Enter API-Football name for 'Queens Park Rangers FC' (or press ENTER to skip): 
+
+Polymarket Team: 'Bundesliga: Hoffenheim'
+Suggestions: 1. FC Heidenheim, 1899 Hoffenheim, Barnoldswick Town, Borussia Hildesheim, Bourne Town
+Enter API-Football name for 'Bundesliga: Hoffenheim' (or press ENTER to skip): 
+
+Polymarket Team: 'CD Roda'
+Suggestions: AFC Croydon Athletic, AFC Stoneham, AS Roma, Brondby, CD Coria
+Enter API-Football name for 'CD Roda' (or press ENTER to skip): 
+
+Polymarket Team: 'Real Avilés CF'
+Suggestions: AEK Athens FC, Alaves, Breidablik, Carshalton Athletic, Celta Vigo
+Enter API-Football name for 'Real Avilés CF' (or press ENTER to skip): 
+
+Polymarket Team: 'Shrewsbury Town FC'
+Suggestions: AD Ceuta FC, Aldershot Town, Alfreton Town, Amersham Town, Arlesey Town
+Enter API-Football name for 'Shrewsbury Town FC' (or press ENTER to skip): 
+
+Polymarket Team: 'PE Sant Jordi'
+Suggestions: Anstey Nomads, Aurrerá Vitoria, Bedfont Sports, Belper United, Bergantiños
+Enter API-Football name for 'PE Sant Jordi' (or press ENTER to skip): 
+
+Polymarket Team: 'Cardiff City'
+Suggestions: AD Ceuta FC, Ardley United, Ashford United, Barnoldswick Town, Basford United
+Enter API-Football name for 'Cardiff City' (or press ENTER to skip): 
+
+Polymarket Team: 'UCL: Stade Brestois'
+Suggestions: 1. FC Magdeburg, Anderlecht, Barnstaple Town, Biggleswade Town, Buckland Athletic
+Enter API-Football name for 'UCL: Stade Brestois' (or press ENTER to skip): 
+
+Polymarket Team: 'CD Toledo'
+Suggestions: AFC Croydon Athletic, AFC Dunstable, AFC Emley, AFC Stoneham, AFC Telford United
+Enter API-Football name for 'CD Toledo' (or press ENTER to skip): 
+
+Polymarket Team: 'Caudal Deportivo'
+Suggestions: AFC Liverpool, Albion Sports, Alcorcon, Aldershot Town, Almeria
+Enter API-Football name for 'Caudal Deportivo' (or press ENTER to skip): 
+
+Polymarket Team: 'Bradford City AFC'
+Suggestions: AD Ceuta FC, AFC Telford United, Amorebieta, Ashford United, Badshot Lea
+Enter API-Football name for 'Bradford City AFC' (or press ENTER to skip): 
+
+Polymarket Team: 'SD Negreira'
+Suggestions: AS Roma, Almeria, Andover New Street, Austria, Brescia
+Enter API-Football name for 'SD Negreira' (or press ENTER to skip): 
+
+Polymarket Team: 'SD Eibar'
+Suggestions: AD Ceuta FC, AFC Sudbury, Aston Villa, Bari, Barnet
+Enter API-Football name for 'SD Eibar' (or press ENTER to skip): 
+
+Polymarket Team: 'Oldham Athletic AFC'
+Suggestions: AEK Athens FC, AFC Croydon Athletic, Athletic Club, Athletic Newham, Atletico Madrid
+Enter API-Football name for 'Oldham Athletic AFC' (or press ENTER to skip): 
+
+Polymarket Team: 'Preston North End FC'
+Suggestions: 1874 Northwich, AEK Athens FC, AFC Kempston Rovers, Alfreton Town, Ashington AFC
+Enter API-Football name for 'Preston North End FC' (or press ENTER to skip): 
+
+Polymarket Team: 'CF Lorca Deportiva'
+Suggestions: Borussia Dortmund, Chadderton, Compostela, Croatia, Deportiva Minera
+Enter API-Football name for 'CF Lorca Deportiva' (or press ENTER to skip): 
+
+Polymarket Team: 'CD Alberite'
+Suggestions: 1. FC Kaiserslautern, AFC Croydon Athletic, AFC Dunstable, AFC Liverpool, AFC Telford United
+Enter API-Football name for 'CD Alberite' (or press ENTER to skip): 
+
+Polymarket Team: 'CD Atlético Tordesillas'
+Suggestions: AFC Croydon Athletic, Aston Villa, Athletic Club, Athletic Newham, Atletico Madrid
+Enter API-Football name for 'CD Atlético Tordesillas' (or press ENTER to skip): 
+
+Polymarket Team: 'AD Mérida'
+Suggestions: AC Milan, AFC Mansfield, AFC Wulfrunians, AS Roma, AZ Alkmaar
+Enter API-Football name for 'AD Mérida' (or press ENTER to skip): 
+
+Polymarket Team: 'KF Shkëndija 79'
+Suggestions: BK Hacken, FC Astana, FC Schalke 04, NK Osijek, Shkendija
+Enter API-Football name for 'KF Shkëndija 79' (or press ENTER to skip): 
+
+Polymarket Team: 'La Liga: Real Betis'
+Suggestions: Amorebieta, Atlètic Club d'Escaldes, Brightlingsea Regent, Cagliari, Carshalton Athletic
+Enter API-Football name for 'La Liga: Real Betis' (or press ENTER to skip): 
+
+Polymarket Team: 'PSG (To Advance)'
+Suggestions: Ashby Ivanhoe, Ashington AFC, B36 Torshavn, Bradford (Park Avenue), Easington Colliery
+Enter API-Football name for 'PSG (To Advance)' (or press ENTER to skip): 
+
+Polymarket Team: 'UEFA Europa Conference League Final: Real Betis'
+
+Enter API-Football name for 'UEFA Europa Conference League Final: Real Betis' (or press ENTER to skip): 
+Polymarket Team: 'UEL: Frankfurt'
+
+Suggestions: AFC Wulfrunians, Abbey Rangers, Blackburn, Deeping Rangers, Eintracht Frankfurt
+Enter API-Football name for 'UEL: Frankfurt' (or press ENTER to skip): 
+Polymarket Team: 'Atlético Palma del Río CF'
+Suggestions: Athletic Club, Athletic Newham, Atletico Madrid, Atlètic Club d'Escaldes, Atlético Paso
+Enter API-Football name for 'Atlético Palma del Río CF' (or press ENTER to skip): 
+
+Polymarket Team: 'Europa League: Braga'
+Suggestions: AEK Larnaca, Cercle Brugge, Eastbourne Borough, Europa Fc, Herne Bay
+Enter API-Football name for 'Europa League: Braga' (or press ENTER to skip): 
+
+Polymarket Team: 'CE Constancia'
+Suggestions: AD Ceuta FC, AFC Croydon Athletic, AFC Dunstable, Accrington ST, Apoel Nicosia
+Enter API-Football name for 'CE Constancia' (or press ENTER to skip): 
+
+Polymarket Team: 'AS Omónoia Leukosías'
+Suggestions: AS Roma, Anstey Nomads, Arminia Bielefeld, Ashford Town (Middlesex), Austria Vienna
+Enter API-Football name for 'AS Omónoia Leukosías' (or press ENTER to skip): 
+
+Polymarket Team: 'SD Logroñés'
+Suggestions: AS Roma, Alcorcon, BSC Young Boys, Baffins Milton Rovers, CD Coria
+Enter API-Football name for 'SD Logroñés' (or press ENTER to skip): 
+
+Polymarket Team: 'Northampton Town FC'
+Suggestions: 1874 Northwich, AFC Kempston Rovers, Aldershot Town, Alfreton Town, Alton Town
+Enter API-Football name for 'Northampton Town FC' (or press ENTER to skip): 
+
+Polymarket Team: 'Norwich City FC'
+Suggestions: 1874 Northwich, AD Ceuta FC, Barnoldswick Town, Bath City, Bournemouth FC
+Enter API-Football name for 'Norwich City FC' (or press ENTER to skip): 
+
+Polymarket Team: 'Bolton Wanderers FC'
+Suggestions: AFC Kempston Rovers, Abbey Rangers, Alfreton Town, Alton Town, Anderlecht
+Enter API-Football name for 'Bolton Wanderers FC' (or press ENTER to skip): 
+
+Polymarket Team: 'FA Cup: Leyton Orient'
+Suggestions: AFC Kempston Rovers, AFC Liverpool, Accrington ST, Albion Sports, Alfreton Town
+Enter API-Football name for 'FA Cup: Leyton Orient' (or press ENTER to skip): 
+
+Polymarket Team: 'Coppa Italia Final: Milan'
+Suggestions: AC Milan, Austria Vienna, Crystal Palace, FC Levadia Tallinn, Flora Tallinn
+Enter API-Football name for 'Coppa Italia Final: Milan' (or press ENTER to skip): 
+
+Polymarket Team: 'Derby County FC'
+Suggestions: AD Ceuta FC, AEK Athens FC, Aldershot Town, Ardley United, Aylesbury United
+Enter API-Football name for 'Derby County FC' (or press ENTER to skip): 
+
+Polymarket Team: 'UEL: Athletic Bilbao'
+Suggestions: AC Milan, AEK Athens FC, AFC Croydon Athletic, Apoel Nicosia, Athletic Club
+Enter API-Football name for 'UEL: Athletic Bilbao' (or press ENTER to skip): 
+
+Polymarket Team: 'FC København'
+Suggestions: 1. FC Heidenheim, 1. FC Köln, AFC Kempston Rovers, AFC Rushden & Diamonds, AFC Stoneham
+Enter API-Football name for 'FC København' (or press ENTER to skip): 
+
+Polymarket Team: 'Qairat FK'
+Suggestions: AEK Athens FC, Barakaldo, Barbastro, Darlaston Town, Dartford
+Enter API-Football name for 'Qairat FK' (or press ENTER to skip): 
+
+Polymarket Team: 'UEFA Europa League: Athletic Club'
+
+Suggestions: AFC Croydon Athletic, Athletic Club, Brantham Athletic, Buckland Athletic, Carshalton Athletic
+Enter API-Football name for 'UEFA Europa League: Athletic Club' (or press ENTER to skip): 
+Polymarket Team: 'Cardiff City FC'
+Suggestions: AD Ceuta FC, AEK Athens FC, Ardley United, Ashford United, Basford United
+Enter API-Football name for 'Cardiff City FC' (or press ENTER to skip): 
+
+Polymarket Team: 'CF Talavera'
+Suggestions: 1. FC Kaiserslautern, AC Milan, AEK Larnaca, AFC Dunstable, AFC Liverpool
+Enter API-Football name for 'CF Talavera' (or press ENTER to skip): 
+
+Polymarket Team: 'FA Cup: Stoke City'
+Suggestions: AFC Stoneham, Ashton United, Aston Villa, Atherstone Town, Basingstoke Town
+Enter API-Football name for 'FA Cup: Stoke City' (or press ENTER to skip): 
+
+Polymarket Team: 'Carabao Cup: Stoke City'
+Suggestions: Atherstone Town, Barbastro, Basingstoke Town, Bath City, Boston Town
+Enter API-Football name for 'Carabao Cup: Stoke City' (or press ENTER to skip): 
+
+Polymarket Team: 'FA Cup: Birmingham City'
+Suggestions: Accrington ST, Altrincham, Bath City, Birmingham, Cambridge City
+Enter API-Football name for 'FA Cup: Birmingham City' (or press ENTER to skip): 
+
+Polymarket Team: 'Copa del Rey: Real Sociedad'
+Suggestions: Ardley United, Colney Heath, Cray Wanderers, Hapoel Beer Sheva, Hayes & Yeading United
+Enter API-Football name for 'Copa del Rey: Real Sociedad' (or press ENTER to skip): 
+
+Polymarket Team: 'SD Ponferradina'
+Suggestions: Ashford United, Basford United, Bromsgrove Sporting, CD Coria, Deportiva Minera
+Enter API-Football name for 'SD Ponferradina' (or press ENTER to skip): 
+
+Polymarket Team: 'Coventry City FC'
+Suggestions: AD Ceuta FC, Andover New Street, Bath City, Beverley Town, Bristol City
+Enter API-Football name for 'Coventry City FC' (or press ENTER to skip): 
+
+Polymarket Team: 'UEL: Maccabi TLV'
+Suggestions: Accrington ST, Ely City, Guiseley AFC, Hull City, Juve Stabia
+Enter API-Football name for 'UEL: Maccabi TLV' (or press ENTER to skip): 
+
+Polymarket Team: 'Copa Del Rey: Real Madrid'
+Suggestions: Ardley United, Atletico Madrid, Colney Heath, Cray Valley PM, Cray Wanderers
+Enter API-Football name for 'Copa Del Rey: Real Madrid' (or press ENTER to skip): 
+
+Polymarket Team: 'Peterborough United FC'
+Suggestions: AFC Telford United, Ardley United, Ascot United, Ashford United, Ashton United
+Enter API-Football name for 'Peterborough United FC' (or press ENTER to skip): 
+
+Polymarket Team: 'Champions League Final: PSG'
+Suggestions: Arminia Bielefeld, Campion, Hampton & Richmond, Moneyfields, Ponferradina
+Enter API-Football name for 'Champions League Final: PSG' (or press ENTER to skip): 
+
+Polymarket Team: 'FV Illertissen'
+Suggestions: 1. FC Kaiserslautern, AFC Wimbledon, Avellino, Bayer Leverkusen, Billericay Town
+Enter API-Football name for 'FV Illertissen' (or press ENTER to skip): 
+
+Polymarket Team: 'Europa League: Malmo'
+Suggestions: Aylesbury Vale Dynamos, Burton Albion, Cray Valley PM, Europa Fc, Metropolitan Police
+Enter API-Football name for 'Europa League: Malmo' (or press ENTER to skip): 
+
+Polymarket Team: 'CD Tenerife'
+Suggestions: 1. FC Heidenheim, AEK Athens FC, AFC Stoneham, AFC Telford United, AFC Whyteleafe
+Enter API-Football name for 'CD Tenerife' (or press ENTER to skip): 
+
+Polymarket Team: 'LOSC'
+Suggestions: Alcorcon, Dolorense, Elche, Gloucester City, Ilves
+Enter API-Football name for 'LOSC' (or press ENTER to skip): 
+
+Polymarket Team: 'UCL: Bayern Munich'
+Suggestions: Alemannia Aachen, Aylesbury United, Banbury United, Basford United, Basildon United
+Enter API-Football name for 'UCL: Bayern Munich' (or press ENTER to skip): 
+
+Polymarket Team: 'EPL: Wolverhampton'
+Suggestions: Aldershot Town, Amersham Town, Beckenham Town, Belper Town, Berkhamsted
+Enter API-Football name for 'EPL: Wolverhampton' (or press ENTER to skip): 
+
+Polymarket Team: 'FC Kairat Almaty'
+Suggestions: 1. FC Kaiserslautern, AFC Croydon Athletic, AFC Liverpool, AZ Alkmaar, Ararat-Armenia
+Enter API-Football name for 'FC Kairat Almaty' (or press ENTER to skip): 
+
+Polymarket Team: 'Besiktas'
+Suggestions: Amorebieta, Barnet, Basingstoke Town, Bearsted, Beasain
+Enter API-Football name for 'Besiktas' (or press ENTER to skip): 
+
+Polymarket Team: 'Cheltenham Town FC'
+Suggestions: 1. FC Heidenheim, AD Ceuta FC, AFC Whyteleafe, Aldershot Town, Alfreton Town
+Enter API-Football name for 'Cheltenham Town FC' (or press ENTER to skip): 
+
+Polymarket Team: 'Carlisle United FC'
+Suggestions: AFC Telford United, Ardley United, Arlesey Town, Ascot United, Ashford United
+Enter API-Football name for 'Carlisle United FC' (or press ENTER to skip): 
+
+Polymarket Team: 'Bundesliga: Bayern Munich'
+Suggestions: Bayern München, Belper United, Eastbourne Borough, Manchester United, Newcastle Benfield
+Enter API-Football name for 'Bundesliga: Bayern Munich' (or press ENTER to skip): 
+
+Polymarket Team: 'Real Racing Club'
+Suggestions: Abbey Rangers, Accrington ST, Alcorcon, Altrincham, Ashington AFC
+Enter API-Football name for 'Real Racing Club' (or press ENTER to skip): 
+
+Polymarket Team: 'CF Campanario'
+Suggestions: AC Milan, AFC Kempston Rovers, AFC Mansfield, AZ Alkmaar, Alfaro
+Enter API-Football name for 'CF Campanario' (or press ENTER to skip): 
+
+Polymarket Team: 'UD San Fernando'
+Suggestions: AFC Mansfield, Anstey Nomads, Barakaldo, Caernarfon Town, Canvey Island
+Enter API-Football name for 'UD San Fernando' (or press ENTER to skip): 
+
+Polymarket Team: 'UEL: RFS'
+Suggestions: Angers, Burgos, Guiseley AFC, Huesca, IF Elfsborg
+Enter API-Football name for 'UEL: RFS' (or press ENTER to skip): 
+
+Polymarket Team: 'Europa League: Roma'
+Suggestions: AS Roma, Cray Valley PM, Europa Fc, GO Ahead Eagles, Leicester Road
+Enter API-Football name for 'Europa League: Roma' (or press ENTER to skip): 
+
+Polymarket Team: 'Doncaster Rovers'
+Suggestions: AFC Kempston Rovers, AS Roma, Abbey Rangers, Anstey Nomads, Auxerre
+Enter API-Football name for 'Doncaster Rovers' (or press ENTER to skip): 
+
+Polymarket Team: 'Wigan Athletic FC'
+Suggestions: AD Ceuta FC, AEK Athens FC, AFC Croydon Athletic, Ashington AFC, Athletic Club
+Enter API-Football name for 'Wigan Athletic FC' (or press ENTER to skip): 
+
+Polymarket Team: 'AEK Lárnakas'
+Suggestions: AEK Athens FC, AEK Larnaca, AFC Wulfrunians, Abbey Rangers, Albania
+Enter API-Football name for 'AEK Lárnakas' (or press ENTER to skip): 
+
+Polymarket Team: 'CD Leganés'
+Suggestions: AC Milan, AFC Emley, AFC Mansfield, AFC Whyteleafe, AFC Wimbledon
+Enter API-Football name for 'CD Leganés' (or press ENTER to skip): 
+
+Polymarket Team: 'Paris FC'
+Suggestions: AD Ceuta FC, AEK Athens FC, Altrincham, Angers, Ashington AFC
+Enter API-Football name for 'Paris FC' (or press ENTER to skip): 
+
+Polymarket Team: 'Lincoln City'
+Suggestions: Accrington ST, Albion Sports, Alton Town, Ascot United, Ashington AFC
+Enter API-Football name for 'Lincoln City' (or press ENTER to skip): 
+
+Polymarket Team: 'Aberdeen FC'
+Suggestions: AD Ceuta FC, AEK Athens FC, AEK Larnaca, Albacete, Anderlecht
+Enter API-Football name for 'Aberdeen FC' (or press ENTER to skip): 
+
+Polymarket Team: 'Crewe Alexandra FC'
+Suggestions: AD Ceuta FC, AEK Athens FC, Alemannia Aachen, Canvey Island, Cray Valley PM
+Enter API-Football name for 'Crewe Alexandra FC' (or press ENTER to skip): 
+
+Polymarket Team: 'Leeds United FC'
+Suggestions: AD Ceuta FC, AEK Athens FC, AFC Telford United, Ardley United, Ascot United
+Enter API-Football name for 'Leeds United FC' (or press ENTER to skip): 
+
+Polymarket Team: 'Atlético Madrid (To Advance)'
+Suggestions: Alemannia Aachen, Atletico Madrid, Atlético Paso, Baffins Milton Rovers, Bottesford Town
+Enter API-Football name for 'Atlético Madrid (To Advance)' (or press ENTER to skip): 
+
+Polymarket Team: 'CD Guadalajara'
+Suggestions: AZ Alkmaar, Atalanta, Badalona, Cagliari, Catanzaro
+Enter API-Football name for 'CD Guadalajara' (or press ENTER to skip): 
+
+Polymarket Team: 'Atlético Melilla CF'
+Suggestions: AC Milan, Almeria, Apoel Nicosia, Aston Villa, Athletic Club
+Enter API-Football name for 'Atlético Melilla CF' (or press ENTER to skip): 
+
+Polymarket Team: 'Universitario FC'
+Suggestions: AD Ceuta FC, Andover New Street, Aurrerá Vitoria, Austria, Bournemouth FC
+Enter API-Football name for 'Universitario FC' (or press ENTER to skip): 
+
+Polymarket Team: 'CD Azuaga'
+Suggestions: AZ Alkmaar, CD Coria, Cadiz, Cagliari, Catania
+Enter API-Football name for 'CD Azuaga' (or press ENTER to skip): 
+
+Polymarket Team: 'UCL: RB Salzburg'
+Suggestions: 1. FC Magdeburg, AFC Sudbury, Cercle Brugge, Club Brugge KV, FC Augsburg
+Enter API-Football name for 'UCL: RB Salzburg' (or press ENTER to skip): 
+
+Polymarket Team: 'Europa League: RFS'
+Suggestions: Atherton Collieries, Bayer Leverkusen, Cultural Leonesa, Europa Fc, GO Ahead Eagles
+Enter API-Football name for 'Europa League: RFS' (or press ENTER to skip): 
+
+Polymarket Team: 'Atlètic Sant Just FC'
+Suggestions: AFC Mansfield, Albion Sports, Atalanta, Athletic Club, Athletic Newham
+Enter API-Football name for 'Atlètic Sant Just FC' (or press ENTER to skip): 
+
+Polymarket Team: 'Darlington FC'
+Suggestions: AD Ceuta FC, Accrington ST, Albion Sports, Alfreton Town, Alton Town
+Enter API-Football name for 'Darlington FC' (or press ENTER to skip): 
+
+Polymarket Team: 'Swansea City AFC'
+Suggestions: AD Ceuta FC, AEK Athens FC, Anstey Nomads, Ashington AFC, Barnsley
+Enter API-Football name for 'Swansea City AFC' (or press ENTER to skip): 
+
+Polymarket Team: 'TSV Fortuna 95 Düsseldorf'
+Suggestions: Ashford Town (Middlesex), Fortuna Düsseldorf, North Shields
+Enter API-Football name for 'TSV Fortuna 95 Düsseldorf' (or press ENTER to skip): 
+
+Polymarket Team: 'CF Rayo Majadahonda'
+Suggestions: AFC Croydon Athletic, Atletico Madrid, Badalona, Cray Wanderers, FC Romania
+Enter API-Football name for 'CF Rayo Majadahonda' (or press ENTER to skip): 
+
+Polymarket Team: 'Olympiakós SFP'
+Suggestions: Europa Fc, Las Palmas, Las Rozas, Lincoln Red Imps FC, Olimpija Ljubljana
+Enter API-Football name for 'Olympiakós SFP' (or press ENTER to skip): 
+
+Polymarket Team: 'UCL: Club Brugge'
+Suggestions: Athletic Club, Atlètic Club d'Escaldes, Bamber Bridge, Cercle Brugge, Club Brugge KV
+Enter API-Football name for 'UCL: Club Brugge' (or press ENTER to skip): 
+
+Polymarket Team: 'FK RFS'
+Suggestions: FC Porto, FK Partizan, FK Sarajevo, Frenford, IF Elfsborg
+Enter API-Football name for 'FK RFS' (or press ENTER to skip): 
+
+Polymarket Team: 'Puente Genil FC'
+Suggestions: Apoel Nicosia, Bournemouth FC, Djurgardens IF, Dunstable Town, Epsom & Ewell FC
+Enter API-Football name for 'Puente Genil FC' (or press ENTER to skip): 
+
+Polymarket Team: 'UD Los Garres'
+Suggestions: Alaves, Buducnost Podgorica, Carrarese, Cortes, Cuarte
+Enter API-Football name for 'UD Los Garres' (or press ENTER to skip): 
+
+Polymarket Team: 'Accrington Stanley FC'
+Suggestions: AD Ceuta FC, AFC Croydon Athletic, AFC Dunstable, Accrington ST, Albion Sports
+Enter API-Football name for 'Accrington Stanley FC' (or press ENTER to skip): 
+
+Polymarket Team: 'PSV'
+Suggestions: KuPS, Padova, Pafos, Paks, Pisa
+Enter API-Football name for 'PSV' (or press ENTER to skip): 
+
+Polymarket Team: 'UEL: Hoffenheim'
+Suggestions: 1. FC Heidenheim, 1899 Hoffenheim, Borussia Hildesheim, Cheltenham, Deal Town
+Enter API-Football name for 'UEL: Hoffenheim' (or press ENTER to skip): 
+
+Polymarket Team: 'KKS Lech Poznań'
+Suggestions: Beckenham Town, Berks County, Brackley Town, Coleshill Town, Dunstable Town
+Enter API-Football name for 'KKS Lech Poznań' (or press ENTER to skip): 
+
+Polymarket Team: 'UCAM Murcia CF'
+Suggestions: AC Milan, Almeria, Amorebieta, CD Coria, Cambridge City
+Enter API-Football name for 'UCAM Murcia CF' (or press ENTER to skip): 
+
+Polymarket Team: 'Qarabağ Ağdam FK'
+Suggestions: Granada CF, Qarabag, Sabah FA
+Enter API-Football name for 'Qarabağ Ağdam FK' (or press ENTER to skip): 
+
+Polymarket Team: 'CD Tropezón'
+Suggestions: AFC Stoneham, AFC Totton, Alcorcon, Baldock Town, Beaconsfield Town
+Enter API-Football name for 'CD Tropezón' (or press ENTER to skip): 
+
+Polymarket Team: 'Club Gimnàstic de Tarragona'
+Suggestions: Barnstaple Town, Basingstoke Town, Bognor Regis Town, Cherno More Varna, Cinderford Town
+Enter API-Football name for 'Club Gimnàstic de Tarragona' (or press ENTER to skip): 
+
+Polymarket Team: 'Braintree Town FC'
+Suggestions: Accrington ST, Aldershot Town, Alfreton Town, Alton Town, Amersham Town
+Enter API-Football name for 'Braintree Town FC' (or press ENTER to skip): 
+
+Polymarket Team: 'Albacete Balompié'
+Suggestions: Albacete, Albania, Athletic Newham, Atletico Madrid, Aylestone Park
+Enter API-Football name for 'Albacete Balompié' (or press ENTER to skip): 
+
+Polymarket Team: 'Wolverhampton (To Advance)'
+
+Suggestions: AFC Kempston Rovers, Alfreton Town, Alton Town, Amersham Town, Atherstone Town
+Enter API-Football name for 'Wolverhampton (To Advance)' (or press ENTER to skip): 
+Polymarket Team: 'FA Cup: Plymouth Argyle'
+Suggestions: AFC Portchester, FC Copenhagen, Falmouth Town, Great Yarmouth Town, Plymouth
+Enter API-Football name for 'FA Cup: Plymouth Argyle' (or press ENTER to skip): 
+
+Polymarket Team: 'UEL: Olympiacos'
+Suggestions: Anstey Nomads, Apoel Nicosia, Guiseley AFC, Holyport, Juventud Torremolinos
+Enter API-Football name for 'UEL: Olympiacos' (or press ENTER to skip): 
+
+Polymarket Team: 'Wycombe Wanderers FC'
+Suggestions: AEK Athens FC, Abbey Rangers, Anderlecht, Boro Rangers, Camberley Town
+Enter API-Football name for 'Wycombe Wanderers FC' (or press ENTER to skip): 
+
+Polymarket Team: 'CD Yuncos'
+Suggestions: AFC Dunstable, AFC Wulfrunians, Apoel Nicosia, BSC Young Boys, CD Coria
+Enter API-Football name for 'CD Yuncos' (or press ENTER to skip): 
+
+Polymarket Team: 'West Bromwich Albion FC'
+Suggestions: Boldmere St. Michaels, Bridlington Town, Brislington, Bugbrooke St Michaels, Burton Albion
+Enter API-Football name for 'West Bromwich Albion FC' (or press ENTER to skip): 
+
+Polymarket Team: 'UEL: Braga'
+Suggestions: AEK Larnaca, Abbey Rangers, Albania, Bamber Bridge, Barakaldo
+Enter API-Football name for 'UEL: Braga' (or press ENTER to skip): 
+
+Polymarket Team: 'Ligue 1: PSG'
+Suggestions: Hullbridge Sports, Leganes
+Enter API-Football name for 'Ligue 1: PSG' (or press ENTER to skip): 
+
+Polymarket Team: 'FC Lausanne-Sport'
+Suggestions: 1. FC Nürnberg, AFC Liverpool, AFC Portchester, AFC Rushden & Diamonds, AFC Stoneham
+Enter API-Football name for 'FC Lausanne-Sport' (or press ENTER to skip): 
+
+Polymarket Team: 'UCL: Red Star Belgrade'
+Suggestions: Boldmere St. Michaels, Bugbrooke St Michaels, Cherno More Varna, Chesterfield, FC Cartagena
+Enter API-Football name for 'UCL: Red Star Belgrade' (or press ENTER to skip): 
+
+Polymarket Team: 'CD Atlético Baleares'
+Suggestions: AFC Croydon Athletic, AFC Kempston Rovers, AFC Whyteleafe, Albacete, Atherton Collieries
+Enter API-Football name for 'CD Atlético Baleares' (or press ENTER to skip): 
+
+Polymarket Team: 'Grimsby Town'
+Suggestions: Aldershot Town, Alfreton Town, Alton Town, Amersham Town, Arlesey Town
+Enter API-Football name for 'Grimsby Town' (or press ENTER to skip): 
+
+Polymarket Team: 'CD Ebro'
+Suggestions: 1. FC Magdeburg, AFC Liverpool, AFC Sudbury, AS Roma, Barrow
+Enter API-Football name for 'CD Ebro' (or press ENTER to skip): 
+
+Polymarket Team: 'Southend United FC'
+Suggestions: AEK Athens FC, AFC Telford United, Ardley United, Ascot United, Ashford United
+Enter API-Football name for 'Southend United FC' (or press ENTER to skip): 
+
+Polymarket Team: 'UCL: PSV'
+Suggestions: Celta Vigo, KuPS, Las Palmas
+Enter API-Football name for 'UCL: PSV' (or press ENTER to skip): 
+
+Polymarket Team: 'Antequera CF'
+Suggestions: AD Ceuta FC, AFC Whyteleafe, Almeria, Alvechurch, Anderlecht
+Enter API-Football name for 'Antequera CF' (or press ENTER to skip): 
+
+Polymarket Team: 'Birmingham City FC'
+Suggestions: AD Ceuta FC, Altrincham, Arminia Bielefeld, Bath City, Beckenham Town
+Enter API-Football name for 'Birmingham City FC' (or press ENTER to skip): 
+
+Polymarket Team: 'UCL: Stuttgart'
+Suggestions: AFC Totton, Astur, Blyth Spartans, Colchester, FC Astana
+Enter API-Football name for 'UCL: Stuttgart' (or press ENTER to skip): 
+
+Polymarket Team: 'DFB-Pokal Final: Arminia'
+Suggestions: Birmingham, Deportiva Minera, Dinamo Batumi, Dinamo Minsk, FK Zalgiris Vilnius
+Enter API-Football name for 'DFB-Pokal Final: Arminia' (or press ENTER to skip): 
+
+Polymarket Team: 'UCL: Real Madrid'
+Suggestions: AZ Alkmaar, Almeria, Atletico Madrid, Bradford, Cagliari
+Enter API-Football name for 'UCL: Real Madrid' (or press ENTER to skip): 
+
+Polymarket Team: 'Tranmere Rovers FC'
+Suggestions: AFC Kempston Rovers, Anderlecht, Angers, Atherton Collieries, Baffins Milton Rovers
+Enter API-Football name for 'Tranmere Rovers FC' (or press ENTER to skip): 
+
+Polymarket Team: 'UCL: PSG'
+Suggestions: Celta Vigo, KuPS, Las Palmas
+Enter API-Football name for 'UCL: PSG' (or press ENTER to skip): 
+
+Polymarket Team: 'FA Cup: Leeds United'
+Suggestions: AFC Telford United, Ardley United, Ascot United, Ashford United, Ashton United
+Enter API-Football name for 'FA Cup: Leeds United' (or press ENTER to skip): 
+
+Polymarket Team: 'Huddersfield Town'
+Suggestions: Aldershot Town, Alton Town, Amersham Town, Arlesey Town, Atherstone Town
+Enter API-Football name for 'Huddersfield Town' (or press ENTER to skip): 
+
+Polymarket Team: 'Europa League: Dynamo Kiev'
+Suggestions: Aylesbury Vale Dynamos, Dynamo Kyiv, Shepshed Dynamo
+Enter API-Football name for 'Europa League: Dynamo Kiev' (or press ENTER to skip): 
+
+Polymarket Team: 'Europa League: Hoffenheim'
+Suggestions: 1. FC Heidenheim, 1899 Hoffenheim, Borussia Hildesheim, Crawley Green, Europa Fc
+Enter API-Football name for 'Europa League: Hoffenheim' (or press ENTER to skip): 
+
+Polymarket Team: 'Atlético Astorga FC'
+Suggestions: AFC Stoneham, Albion Sports, Ashington AFC, Athletic Club, Athletic Newham
+Enter API-Football name for 'Atlético Astorga FC' (or press ENTER to skip): 
+
+Polymarket Team: 'Red Star Belgrade'
+Suggestions: Andover New Street, Arminia Bielefeld, Boldmere St. Michaels, Breidablik, Bugbrooke St Michaels
+Enter API-Football name for 'Red Star Belgrade' (or press ENTER to skip): 
+
+Polymarket Team: 'Luton Town FC'
+Suggestions: AD Ceuta FC, Aldershot Town, Alfreton Town, Alton Town, Arlesey Town
+Enter API-Football name for 'Luton Town FC' (or press ENTER to skip): 
+
+Polymarket Team: 'Roma (To Advance)'
+Suggestions: B36 Torshavn, Boro Rangers, Bradford (Park Avenue), Brocton, Corsham Town
+Enter API-Football name for 'Roma (To Advance)' (or press ENTER to skip): 
+
+Polymarket Team: 'La Liga: Atlético Madrid'
+Suggestions: AFC Croydon Athletic, AZ Alkmaar, Athletic Newham, Atletico Madrid, Atlético Paso
+Enter API-Football name for 'La Liga: Atlético Madrid' (or press ENTER to skip): 
+
+Polymarket Team: 'Leeds United'
+Suggestions: AFC Telford United, Ardley United, Arlesey Town, Ascot United, Ashford United
+Enter API-Football name for 'Leeds United' (or press ENTER to skip): 
+
+Polymarket Team: 'UEL: Bodo Glimt'
+Suggestions: Belgium, Bodo/Glimt, Bognor Regis Town, Eastbourne Borough, Ely City
+Enter API-Football name for 'UEL: Bodo Glimt' (or press ENTER to skip): 
+
+Polymarket Team: 'Scunthorpe United FC'
+Suggestions: AEK Athens FC, AFC Telford United, Ardley United, Ascot United, Ashford United
+Enter API-Football name for 'Scunthorpe United FC' (or press ENTER to skip): 
+
+Polymarket Team: 'Europa League: Ferencvaros'
+Suggestions: Bayer Leverkusen, Crawley Green, Cray Wanderers, Europa Fc, Ferencvarosi TC
+Enter API-Football name for 'Europa League: Ferencvaros' (or press ENTER to skip): 
+
+Polymarket Team: 'SK Sigma Olomouc'
+Suggestions: Borussia Dortmund, Hansa Rostock, Kilmarnock, Mallorca, Malmo FF
+Enter API-Football name for 'SK Sigma Olomouc' (or press ENTER to skip): 
+
+Polymarket Team: 'Europa League: FK RFS'
+Suggestions: Europa Fc, GO Ahead Eagles
+Enter API-Football name for 'Europa League: FK RFS' (or press ENTER to skip): 
+
+Polymarket Team: 'UEL: Fenerbahce'
+Suggestions: Albacete, Corvinul Hunedoara, Eldense, Fenerbahçe, Guiseley AFC
+Enter API-Football name for 'UEL: Fenerbahce' (or press ENTER to skip): 
+
+Polymarket Team: 'Bodo Glimt (1st Leg)'
+Suggestions: Basford United, Bodo/Glimt, Bootle, London Lions, Metropolitan Police
+Enter API-Football name for 'Bodo Glimt (1st Leg)' (or press ENTER to skip): 
+
+Polymarket Team: 'Millwall (To Advance)'
+Suggestions: Biggleswade Town, Billericay Town, Bradford (Park Avenue), Hanwell Town, Hucknall Town
+Enter API-Football name for 'Millwall (To Advance)' (or press ENTER to skip): 
+
+Polymarket Team: 'UD Maracena'
+Suggestions: AC Milan, AD Ceuta FC, AEK Larnaca, Albacete, Albania
+Enter API-Football name for 'UD Maracena' (or press ENTER to skip): 
+
+Polymarket Team: 'FK Bodø/Glimt'
+Suggestions: Bodo/Glimt, Bolton, FK Liepaja, FK Tobol Kostanay, HNK Hajduk Split
+Enter API-Football name for 'FK Bodø/Glimt' (or press ENTER to skip): 
+
+Polymarket Team: 'Real Zaragoza'
+Suggestions: AEK Larnaca, Alfaro, Catanzaro, Celta Vigo, Crystal Palace
+Enter API-Football name for 'Real Zaragoza' (or press ENTER to skip): 
+
+Polymarket Team: 'Rotherham United FC'
+Suggestions: AEK Athens FC, AFC Telford United, Amersham Town, Ardley United, Ascot United
+Enter API-Football name for 'Rotherham United FC' (or press ENTER to skip): 
+
+Polymarket Team: 'Europa League: Frankfurt'
+Suggestions: Eintracht Frankfurt, Europa Fc
+Enter API-Football name for 'Europa League: Frankfurt' (or press ENTER to skip): 
+
+Polymarket Team: 'CD Extremadura'
+Suggestions: 1. FC Magdeburg, Atletico Madrid, CD Coria, Cheltenham, Cherno More Varna
+Enter API-Football name for 'CD Extremadura' (or press ENTER to skip): 
+
+Polymarket Team: 'Samsunspor'
+Suggestions: Albion Sports, Bedfont Sports, Bromsgrove Sporting, Chesham United, Cowes Sports
+Enter API-Football name for 'Samsunspor' (or press ENTER to skip): 
+
+Polymarket Team: 'SD Textil Escudo'
+Suggestions: Athletic Club, Atlètic Club d'Escaldes, Atlético Paso, Buckland Athletic, Chesterfield
+Enter API-Football name for 'SD Textil Escudo' (or press ENTER to skip): 
+
+Polymarket Team: 'Europa League: Bodo Glimt'
+Suggestions: Bodo/Glimt, Crawley Down Gatwick, Eastbourne Borough, Europa Fc
+Enter API-Football name for 'Europa League: Bodo Glimt' (or press ENTER to skip): 
+
+Polymarket Team: 'RB Salzburg'
+Suggestions: 1. FC Magdeburg, AFC Sudbury, Arsenal, Blackburn, Burgos
+Enter API-Football name for 'RB Salzburg' (or press ENTER to skip): 
+
+Polymarket Team: 'Hartlepool United FC'
+Suggestions: AFC Telford United, Apoel Nicosia, Ardley United, Ascot United, Ashford United
+Enter API-Football name for 'Hartlepool United FC' (or press ENTER to skip): 
+
+Polymarket Team: 'CF Inter de Valdemoro'
+Suggestions: Atlètic Club d'Escaldes, Aylesbury Vale Dynamos, Cherno More Varna, Chesterfield, Cinderford Town
+Enter API-Football name for 'CF Inter de Valdemoro' (or press ENTER to skip): 
+
+Polymarket Team: 'Cultural y Deportiva Leonesa'
+Suggestions: Aldershot Town, Austria Vienna, Ceuta 6 de Junio, Chadderton, Ciudad de Lucena
+Enter API-Football name for 'Cultural y Deportiva Leonesa' (or press ENTER to skip): 
+
+Polymarket Team: 'FA Cup: Blackburn Rovers'
+Suggestions: AFC Kempston Rovers, Abbey Rangers, Baffins Milton Rovers, Barton Rovers, Blackburn
+Enter API-Football name for 'FA Cup: Blackburn Rovers' (or press ENTER to skip): 
+
+Polymarket Team: 'UMF Breiðablik'
+Suggestions: Amorebieta, Breidablik, Brescia, Club Brugge KV, Czech Republic
+Enter API-Football name for 'UMF Breiðablik' (or press ENTER to skip): 
+
+Polymarket Team: 'UE Sant Andreu'
+Suggestions: Anderlecht, Anstey Nomads, Bemerton Heath Harleq., Braintree, Bugbrooke St Michaels
+Enter API-Football name for 'UE Sant Andreu' (or press ENTER to skip): 
+
+Polymarket Team: 'Charlton Athletic FC'
+
+Suggestions: AEK Athens FC, AFC Croydon Athletic, Accrington ST, Alfreton Town, Alton Town
+Enter API-Football name for 'Charlton Athletic FC' (or press ENTER to skip): 
+Polymarket Team: 'Cádiz CF'
+Suggestions: AD Ceuta FC, CD Coria, Cadiz, Cardiff, Celtic
+Enter API-Football name for 'Cádiz CF' (or press ENTER to skip): 
+
+Polymarket Team: 'SD Huesca'
+Suggestions: Ashford United, Basford United, Basildon United, Brescia, CD Coria
+Enter API-Football name for 'SD Huesca' (or press ENTER to skip): 
+
+Polymarket Team: 'Bradford City'
+Suggestions: AD Ceuta FC, AFC Portchester, AFC Telford United, Amorebieta, Ardley United
+Enter API-Football name for 'Bradford City' (or press ENTER to skip): 
+
+Polymarket Team: 'Wycombe Wanderers'
+Suggestions: Abbey Rangers, Anderlecht, Angers, Biggleswade, Boro Rangers
+Enter API-Football name for 'Wycombe Wanderers' (or press ENTER to skip): 
+
+Polymarket Team: 'Bodø/Glimt (To Advance)'
+Suggestions: Blyth Town, Bodo/Glimt, Bolton, Bradford (Park Avenue), Bridgwater Town
+Enter API-Football name for 'Bodø/Glimt (To Advance)' (or press ENTER to skip): 
+
+Polymarket Team: 'Atlético Calatayud CF'
+Suggestions: Atalanta, Athletic Club, Athletic Newham, Atletico Madrid, Atlètic Club d'Escaldes
+Enter API-Football name for 'Atlético Calatayud CF' (or press ENTER to skip): 
+
+Polymarket Team: 'CD Eldense'
+Suggestions: 1. FC Heidenheim, AC Milan, AFC Dunstable, AFC Emley, AFC Fylde
+Enter API-Football name for 'CD Eldense' (or press ENTER to skip): 
+
+Polymarket Team: 'Copa del Rey Final: Real Madrid'
+
+Suggestions: Ardley United, Real Madrid, Tadley Calleva, Unionistas de Salamanca
+Enter API-Football name for 'Copa del Rey Final: Real Madrid' (or press ENTER to skip): 
+Polymarket Team: 'CD Lourdes'
+Suggestions: AFC Emley, AFC Fylde, AFC Hornchurch, AFC Kempston Rovers, AFC Portchester
+Enter API-Football name for 'CD Lourdes' (or press ENTER to skip): 
+
+Polymarket Team: 'Córdoba CF'
+Suggestions: Bath City, CD Coria, Cambridge City, Cardiff, Cobham
+Enter API-Football name for 'Córdoba CF' (or press ENTER to skip): 
+
+Polymarket Team: 'Reus FC Reddis'
+Suggestions: 1. FC Heidenheim, 1. FC Nürnberg, AFC Portchester, AFC Rushden & Diamonds, AFC Wulfrunians
+Enter API-Football name for 'Reus FC Reddis' (or press ENTER to skip): 
+
+Polymarket Team: 'CSA Ceuta'
+Suggestions: AD Ceuta FC, Albacete, Amorebieta, Auda, Austria Vienna
+Enter API-Football name for 'CSA Ceuta' (or press ENTER to skip): 
+
+Polymarket Team: 'CE Sabadell FC'
+Suggestions: AD Ceuta FC, AEK Athens FC, AFC Dunstable, Anderlecht, Barwell
+Enter API-Football name for 'CE Sabadell FC' (or press ENTER to skip): 
+
+Polymarket Team: 'La Liga: Real Madrid'
+Suggestions: AZ Alkmaar, Atletico Madrid, Cagliari, Dagenham & Redbridge, Larkhall Athletic
+Enter API-Football name for 'La Liga: Real Madrid' (or press ENTER to skip): 
+
+Polymarket Team: 'RU Saint-Gilloise'
+Suggestions: Bergantiños, Braintree, Brislington, Dinamo Tbilisi, Easington Colliery
+Enter API-Football name for 'RU Saint-Gilloise' (or press ENTER to skip): 
+
+Polymarket Team: 'Viktoria Plzeň'
+Suggestions: Aurrerá Vitoria, Austria Vienna, Borussia Hildesheim, Crystal Palace, Fiorentina
+Enter API-Football name for 'Viktoria Plzeň' (or press ENTER to skip): 
+
+Polymarket Team: 'Viktoria'
+Suggestions: Aktobe, Altrincham, Amorebieta, Aurrerá Vitoria, Austria
+Enter API-Football name for 'Viktoria' (or press ENTER to skip): 
+
+Polymarket Team: 'York City FC'
+Suggestions: AD Ceuta FC, AEK Athens FC, Bath City, Berks County, Bournemouth FC
+Enter API-Football name for 'York City FC' (or press ENTER to skip): 
+
+Polymarket Team: 'RSD Alcalá'
+Suggestions: Arsenal, Badalona, Buckhurst Hill, Carshalton Athletic, Cray Valley PM
+Enter API-Football name for 'RSD Alcalá' (or press ENTER to skip): 
+
+Polymarket Team: 'UD Ourense'
+Suggestions: AFC Portchester, BSC Young Boys, Barnsley, Bedfont Sports, Bourne Town
+Enter API-Football name for 'UD Ourense' (or press ENTER to skip): 
+
+Polymarket Team: 'CE Atlètic Lleida'
+Suggestions: AFC Croydon Athletic, Atherton Collieries, Athletic Club, Athletic Newham, Atletico Madrid
+Enter API-Football name for 'CE Atlètic Lleida' (or press ENTER to skip): 
+
+Polymarket Team: 'Man United (To Advance)'
+Suggestions: Alemannia Aachen, Ardley United, Ascot United, Ashford United, Ashton United
+Enter API-Football name for 'Man United (To Advance)' (or press ENTER to skip): 
+
+Polymarket Team: 'SD Tarazona'
+Suggestions: AEK Larnaca, AFC Stoneham, Albania, Alcorcon, Amersham Town
+Enter API-Football name for 'SD Tarazona' (or press ENTER to skip): 
+
+Polymarket Team: 'Forest Green Rovers FC'
+Suggestions: AEK Athens FC, AFC Kempston Rovers, AFC Portchester, Baffins Milton Rovers, Barton Rovers
+Enter API-Football name for 'Forest Green Rovers FC' (or press ENTER to skip): 
+
+Polymarket Team: 'Europa League: Real Sociedad'
+Suggestions: AEK Larnaca, Europa Fc, Leatherhead, Real Sociedad, Roman Glass St George
+Enter API-Football name for 'Europa League: Real Sociedad' (or press ENTER to skip): 
+
+Polymarket Team: 'Sutton United FC'
+Suggestions: AFC Telford United, Ardley United, Ascot United, Ashford United, Ashington AFC
+Enter API-Football name for 'Sutton United FC' (or press ENTER to skip): 
