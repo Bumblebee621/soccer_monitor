@@ -12,6 +12,9 @@ let
     python-dotenv
     aiohttp
     aiogram
+    yfinance
+    apscheduler
+    lxml
   ]);
 in
 pkgs.mkShell {

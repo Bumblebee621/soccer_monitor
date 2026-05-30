@@ -1,0 +1,15 @@
+[Unit]
+Description=S&P 500 SMA Crossover Alert Bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/ariel/PycharmProjects/PolyMarket_Margins
+ExecStart=/usr/bin/env python3 sma_crossover_bot.py
+Restart=on-failure
+RestartSec=30
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target
