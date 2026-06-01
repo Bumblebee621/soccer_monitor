@@ -96,11 +96,25 @@ def detect_crossovers(tickers: list[str]) -> list[dict]:
     period = f"{SMA_WINDOW + CHART_LOOKBACK + 30}d"
     logger.info(f"Downloading price data for {len(tickers)} tickers (period={period})…")
 
-    data = yf.download(tickers, period=period, group_by="ticker", progress=False, threads=True)
+    # Download in batches to avoid exhausting file descriptors on small VMs
+    BATCH_SIZE = 50
+    frames = []
+    for i in range(0, len(tickers), BATCH_SIZE):
+        batch = tickers[i : i + BATCH_SIZE]
+        logger.info(f"  Batch {i // BATCH_SIZE + 1}: downloading {len(batch)} tickers…")
+        try:
+            batch_data = yf.download(batch, period=period, group_by="ticker", progress=False, threads=True)
+            if not batch_data.empty:
+                frames.append(batch_data)
+        except Exception as e:
+            logger.warning(f"  Batch {i // BATCH_SIZE + 1} failed: {e}")
+        time.sleep(1)  # brief pause between batches
 
-    if data.empty:
-        logger.error("yfinance returned empty data.")
+    if not frames:
+        logger.error("yfinance returned no data across all batches.")
         return []
+
+    data = pd.concat(frames, axis=1)
 
     # Guard against stale data on non-trading days (weekends/holidays).
     # yfinance always returns the last available trading day, so if the
