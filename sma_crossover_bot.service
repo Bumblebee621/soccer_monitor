@@ -5,8 +5,10 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-WorkingDirectory=/home/ariel/PycharmProjects/PolyMarket_Margins
-ExecStart=/usr/bin/env python3 sma_crossover_bot.py
+User=ariel25621
+Group=ariel25621
+WorkingDirectory=/home/ariel25621/soccer_monitor
+ExecStart=/home/ariel25621/soccer_monitor/venv/bin/python sma_crossover_bot.py
 Restart=on-failure
 RestartSec=30
 Environment=PYTHONUNBUFFERED=1
