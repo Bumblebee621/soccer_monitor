@@ -372,8 +372,14 @@ def notify_crossovers(crossovers: list[dict], dry_run: bool = False) -> None:
 # Main scan
 # ---------------------------------------------------------------------------
 
-def scan_stocks(dry_run: bool = False) -> None:
-    """Top-level function executed on each scheduled run."""
+def scan_stocks(dry_run: bool = False, persist_state: bool = True) -> None:
+    """Top-level function executed on each scheduled run.
+
+    Args:
+        dry_run: If True, log alerts instead of sending Telegram messages.
+        persist_state: If False, skip reading/writing the state file (for
+            testing with --scan-now without polluting scheduled runs).
+    """
     logger.info("=" * 60)
     logger.info("Starting S&P 500 SMA crossover scan…")
     logger.info("=" * 60)
@@ -386,16 +392,19 @@ def scan_stocks(dry_run: bool = False) -> None:
             logger.info("No crossovers detected this scan.")
             return
 
-        crossovers = filter_already_alerted(crossovers)
-        if not crossovers:
-            logger.info("All crossovers were already alerted today. Nothing to send.")
-            return
+        if persist_state:
+            crossovers = filter_already_alerted(crossovers)
+            if not crossovers:
+                logger.info("All crossovers were already alerted today. Nothing to send.")
+                return
 
         notify_crossovers(crossovers, dry_run=dry_run)
-        if not dry_run:
+        if not dry_run and persist_state:
             record_alerts(crossovers)
-        else:
+        elif dry_run:
             logger.info(f"[DRY RUN] Would have recorded {len(crossovers)} alert(s) in state file.")
+        else:
+            logger.info(f"[SCAN-NOW] Sent {len(crossovers)} alert(s) — state file not updated.")
 
     except Exception as e:
         logger.exception(f"Scan failed with exception: {e}")
@@ -457,8 +466,8 @@ def main() -> None:
         logger.info("Running in DRY RUN mode — no Telegram messages will be sent.")
         scan_stocks(dry_run=True)
     elif args.scan_now:
-        logger.info("Running immediate scan…")
-        scan_stocks(dry_run=False)
+        logger.info("Running immediate scan (test mode — state file will not be modified)…")
+        scan_stocks(dry_run=False, persist_state=False)
     else:
         run_scheduler()
 
