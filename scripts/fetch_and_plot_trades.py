@@ -1,3 +1,16 @@
+"""
+Polymarket Trade History Fetcher & Plotter
+
+Searches the Polymarket Gamma API for a specific event and market (e.g.
+Over/Under 2.5 goals), downloads the last ~4 hours of CLOB price history
+at 1-second fidelity, saves it to CSV, and generates a probability chart.
+
+Usage:
+    1. Set EVENT_SLUG (or EVENT_QUERY / TEAM_2_QUERY) and MARKET_QUERY.
+    2. Run:  python fetch_and_plot_trades.py
+    3. Outputs: CSV data file + PNG plot.
+"""
+
 import requests
 import pandas as pd
 # pyrefly: ignore [missing-import]
@@ -86,6 +99,14 @@ def fetch_price_history(token_id):
     return data.get('history', [])
 
 def process_and_plot(history_data, market_info):
+    """Convert raw price history into a DataFrame, save to CSV, and render a plot.
+
+    Args:
+        history_data: List of dicts with keys ``t`` (unix timestamp) and
+            ``p`` (price / probability for the "Yes" / "Over" outcome).
+        market_info: Market dict from the Gamma API, used to pull the
+            market question for the plot title.
+    """
     if not history_data:
         print("No historical data found for this market.")
         return
@@ -131,6 +152,7 @@ def process_and_plot(history_data, market_info):
     plt.close()
 
 def main():
+    """Entry point: find the market, fetch price history, and plot it."""
     market_info = fetch_market_info()
     if not market_info:
         print("Could not find the specified market. The event might have expired or the name might be slightly different.")

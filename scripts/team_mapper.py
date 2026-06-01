@@ -1,3 +1,20 @@
+"""
+Team Name Mapper — Polymarket ↔ API-Football
+
+Builds and maintains a JSON mapping file that translates team names as they
+appear on Polymarket event titles to their canonical API-Football equivalents.
+
+Workflow:
+    1. Fetch all team rosters from API-Football for every supported league.
+    2. Scrape current Polymarket soccer events and extract team names.
+    3. Auto-match where possible (exact / normalized), then prompt the user
+       interactively for any remaining unmatched teams.
+    4. Persist results to ``team_mapping.json``.
+
+Usage:
+    python team_mapper.py
+"""
+
 import os
 import json
 import logging
@@ -121,7 +138,11 @@ async def fetch_api_football_teams(session: aiohttp.ClientSession, config: Runti
 
 
 def fetch_polymarket_teams_sync(events) -> Set[str]:
-    # Used if we pass events directly, otherwise we use the async func
+    """Synchronous variant that extracts team names from pre-fetched events.
+
+    Not currently used — kept as a convenience stub for potential REPL or
+    script usage where events have already been downloaded.
+    """
     pass
 
 async def fetch_polymarket_teams(session: aiohttp.ClientSession, config: RuntimeConfig) -> Set[str]:
@@ -173,6 +194,10 @@ async def fetch_polymarket_teams(session: aiohttp.ClientSession, config: Runtime
     return teams
 
 def load_existing_mapping() -> Dict[str, str]:
+    """Load the persisted Polymarket→API-Football team mapping from disk.
+
+    Returns an empty dict if the file doesn't exist or is malformed.
+    """
     if os.path.exists(MAPPING_FILE):
         try:
             with open(MAPPING_FILE, 'r') as f:
@@ -182,11 +207,13 @@ def load_existing_mapping() -> Dict[str, str]:
     return {}
 
 def save_mapping(mapping: Dict[str, str]):
+    """Write the team mapping dict to ``team_mapping.json``."""
     with open(MAPPING_FILE, 'w') as f:
         json.dump(mapping, f, indent=4, sort_keys=True)
     logger.info(f"Saved {len(mapping)} mappings to {MAPPING_FILE}")
 
 async def main():
+    """Entry point: fetch teams from both sources, auto-match, and prompt for unresolved."""
     config = RuntimeConfig()
     
     async with aiohttp.ClientSession() as session:
