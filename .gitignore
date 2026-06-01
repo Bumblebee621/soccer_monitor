@@ -10,3 +10,4 @@ env/
 .vscode/
 .gemini/
 sma_state.json
+config_state.json
