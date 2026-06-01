@@ -92,8 +92,10 @@ def detect_crossovers(tickers: list[str]) -> list[dict]:
 
     Each dict: {ticker, name, close, sma, pct_above, history_df}
     """
-    # We need SMA_WINDOW + a small buffer of trading days
-    period = f"{SMA_WINDOW + CHART_LOOKBACK + 30}d"
+    # yfinance 'period' is in calendar days, but the SMA rolling window
+    # operates on trading days (~5 per 7 calendar days).  We need at least
+    # SMA_WINDOW trading days, so multiply by 7/5 ≈ 1.4 and add a margin.
+    period = f"{int(SMA_WINDOW * 1.4) + 10}d"
     logger.info(f"Downloading price data for {len(tickers)} tickers (period={period})…")
 
     # Download in batches to avoid exhausting file descriptors on small VMs.
