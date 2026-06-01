@@ -11,6 +11,7 @@ WorkingDirectory=/home/ariel25621/soccer_monitor
 ExecStart=/home/ariel25621/soccer_monitor/venv/bin/python sma_crossover_bot.py
 Restart=on-failure
 RestartSec=30
+LimitNOFILE=65536
 Environment=PYTHONUNBUFFERED=1
 
 [Install]
