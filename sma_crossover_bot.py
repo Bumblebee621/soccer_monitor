@@ -134,6 +134,23 @@ def detect_crossovers(tickers: list[str]) -> list[dict]:
         logger.warning(f"Latest price data is {age_days} days old ({latest_date.date()}). Market may be closed. Skipping scan.")
         return []
 
+    # Determine whether yfinance has included today's (partial) bar.
+    # At market open (~9:30 ET / 16:30 IDT), the daily bar for today
+    # often isn't present yet — iloc[-1] would be yesterday's close,
+    # silently shifting all indices back by one day.
+    from zoneinfo import ZoneInfo
+    now_et = datetime.now(ZoneInfo("US/Eastern"))
+    today_et = now_et.date()
+    latest_bar_date = latest_date.date() if not hasattr(latest_date, 'tz') or latest_date.tz is None \
+        else latest_date.astimezone(ZoneInfo("US/Eastern")).date()
+
+    has_today_bar = (latest_bar_date == today_et)
+    if has_today_bar:
+        logger.info(f"Today's bar IS present in data (latest bar: {latest_bar_date}).")
+    else:
+        logger.info(f"Today's bar is NOT present (latest bar: {latest_bar_date}, today ET: {today_et}). "
+                    f"Using end-of-day crossover detection on prior closes.")
+
     crossovers: list[dict] = []
 
     for ticker in tickers:
@@ -149,22 +166,30 @@ def detect_crossovers(tickers: list[str]) -> list[dict]:
 
             sma = close.rolling(window=SMA_WINDOW).mean()
 
-            # current_price: today's latest price (intraday during market hours,
-            #                or final close if market is closed)
-            # yesterday_close: the most recent fully completed trading day's close
-            # sma_latest: the SMA computed over the 150 most recent completed
-            #             closes (ending yesterday) — we use iloc[-2] because
-            #             iloc[-1] would mix in today's partial/intraday bar
-            current_price = close.iloc[-1]
-            yesterday_close = close.iloc[-2]
-            sma_latest = sma.iloc[-2]
+            if has_today_bar:
+                # Today's intraday bar is iloc[-1]; yesterday's full close
+                # is iloc[-2]. We use the SMA ending yesterday (iloc[-2])
+                # to avoid mixing in today's partial bar.
+                current_price = close.iloc[-1]
+                yesterday_close = close.iloc[-2]
+                sma_latest = sma.iloc[-2]
+            else:
+                # Today's bar is missing — iloc[-1] is the last completed
+                # trading day ("yesterday") and iloc[-2] is the day before.
+                # Compare yesterday's close against the SMA ending the day
+                # before to detect yesterday's crossover.
+                current_price = close.iloc[-1]    # yesterday's close
+                yesterday_close = close.iloc[-2]  # day before yesterday
+                sma_latest = sma.iloc[-2]          # SMA ending day before yesterday
+                # Note: this detects yesterday's crossover — still valid
+                # since it's the most recent completed trading day.
 
             if pd.isna(sma_latest):
                 continue
 
-            # Crossover: current price is above the SMA, AND yesterday's
-            # close was at or below the SMA
-            if current_price > sma_latest and yesterday_close <= sma_latest:
+            # Crossover: current price is above the SMA, AND the prior
+            # close was strictly below the SMA
+            if current_price > sma_latest and yesterday_close < sma_latest:
                 pct_above = ((current_price - sma_latest) / sma_latest) * 100
 
                 # Try to get the company name from yfinance (fast info)
@@ -180,7 +205,7 @@ def detect_crossovers(tickers: list[str]) -> list[dict]:
                 crossovers.append({
                     "ticker": ticker,
                     "name": name,
-                    "close": float(current_price),
+                    "price": float(current_price),
                     "sma": float(sma_latest),
                     "pct_above": float(pct_above),
                     "close_series": close,
@@ -353,7 +378,7 @@ def notify_crossovers(crossovers: list[dict], dry_run: bool = False) -> None:
         caption = (
             f"📈 <b>SMA CROSSOVER DETECTED</b>\n\n"
             f"🏷️ <b>{c['ticker']}</b> — {safe_name}\n"
-            f"💰 Close: ${c['close']:.2f}\n"
+            f"💰 Price: ${c['price']:.2f}\n"
             f"📊 150-Day SMA: ${c['sma']:.2f}\n"
             f"📈 Above SMA by: {c['pct_above']:.2f}%\n"
             f"🕐 Detected at: {now_idt} IDT"
@@ -421,8 +446,8 @@ def run_scheduler(dry_run: bool = False) -> None:
     """Start the APScheduler daemon with the three daily triggers."""
     scheduler = BlockingScheduler()
 
-    # Three scheduled scans: 16:30, 18:30, 22:00 IDT — Mon-Fri
-    times = [("16", "30"), ("18", "30"), ("22", "0")]
+    # Three scheduled scans: 16:35, 18:30, 22:00 IDT — Mon-Fri
+    times = [("16", "35"), ("18", "30"), ("22", "0")]
     for hour, minute in times:
         trigger = CronTrigger(
             hour=hour,
