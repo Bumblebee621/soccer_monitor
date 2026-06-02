@@ -138,17 +138,19 @@ def detect_crossovers(tickers: list[str]) -> list[dict]:
     # At market open (~9:30 ET / 16:30 IDT), the daily bar for today
     # often isn't present yet — iloc[-1] would be yesterday's close,
     # silently shifting all indices back by one day.
-    from zoneinfo import ZoneInfo
-    now_et = datetime.now(ZoneInfo("US/Eastern"))
-    today_et = now_et.date()
-    latest_bar_date = latest_date.date() if not hasattr(latest_date, 'tz') or latest_date.tz is None \
-        else latest_date.astimezone(ZoneInfo("US/Eastern")).date()
+    # We compare dates in UTC which is safe because US market hours
+    # (13:30–20:00 UTC summer) fall within a single UTC calendar day.
+    today_utc = datetime.now(timezone.utc).date()
+    if hasattr(latest_date, 'tz') and latest_date.tz is not None:
+        latest_bar_date = latest_date.astimezone(timezone.utc).date()
+    else:
+        latest_bar_date = latest_date.date()
 
-    has_today_bar = (latest_bar_date == today_et)
+    has_today_bar = (latest_bar_date == today_utc)
     if has_today_bar:
         logger.info(f"Today's bar IS present in data (latest bar: {latest_bar_date}).")
     else:
-        logger.info(f"Today's bar is NOT present (latest bar: {latest_bar_date}, today ET: {today_et}). "
+        logger.info(f"Today's bar is NOT present (latest bar: {latest_bar_date}, today UTC: {today_utc}). "
                     f"Using end-of-day crossover detection on prior closes.")
 
     crossovers: list[dict] = []
