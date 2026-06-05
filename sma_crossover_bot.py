@@ -107,7 +107,7 @@ def detect_crossovers(tickers: list[str]) -> list[dict]:
         batch = tickers[i : i + BATCH_SIZE]
         logger.info(f"  Batch {i // BATCH_SIZE + 1}/{-(-len(tickers) // BATCH_SIZE)}: downloading {len(batch)} tickers…")
         try:
-            batch_data = yf.download(batch, period=period, group_by="ticker", progress=False, threads=False)
+            batch_data = yf.download(batch, period=period, group_by="ticker", progress=False, threads=False, auto_adjust=False)
             if not batch_data.empty:
                 frames.append(batch_data)
         except Exception as e:
@@ -182,7 +182,7 @@ def detect_crossovers(tickers: list[str]) -> list[dict]:
                 # before to detect yesterday's crossover.
                 current_price = close.iloc[-1]    # yesterday's close
                 yesterday_close = close.iloc[-2]  # day before yesterday
-                sma_latest = sma.iloc[-2]          # SMA ending day before yesterday
+                sma_latest = sma.iloc[-1]          # SMA ending yesterday (bar is complete)
                 # Note: this detects yesterday's crossover — still valid
                 # since it's the most recent completed trading day.
 
@@ -381,7 +381,7 @@ def notify_crossovers(crossovers: list[dict], dry_run: bool = False) -> None:
             f"📈 <b>SMA CROSSOVER DETECTED</b>\n\n"
             f"🏷️ <b>{c['ticker']}</b> — {safe_name}\n"
             f"💰 Price: ${c['price']:.2f}\n"
-            f"📊 150-Day SMA: ${c['sma']:.2f}\n"
+            f"📊 Prev-Day 150 SMA: ${c['sma']:.2f}\n"
             f"📈 Above SMA by: {c['pct_above']:.2f}%\n"
             f"🕐 Detected at: {now_idt} IDT"
         )
