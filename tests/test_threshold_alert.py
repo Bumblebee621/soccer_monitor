@@ -1,7 +1,7 @@
 """
 Quick test: Simulate a Premier League dip at $0.11 to verify
 the per-league threshold override (0.13) triggers an alert.
-Run on GCP: python test_threshold_alert.py
+Run on the server: python test_threshold_alert.py
 """
 import asyncio
 import logging

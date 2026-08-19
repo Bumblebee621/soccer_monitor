@@ -67,3 +67,9 @@ Ensure you have the required dependencies (or use the provided `shell.nix`).
 ```bash
 python soccer_monitor.py
 ```
+
+## Deployment
+
+Both daemons run under `systemd` on an Oracle Cloud Always Free VM. See
+[`oracle_daemon_guide.md`](oracle_daemon_guide.md) for provisioning, service installation, log
+access, and day-to-day operations.

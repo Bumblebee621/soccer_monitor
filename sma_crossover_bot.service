@@ -5,10 +5,10 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-User=ariel25621
-Group=ariel25621
-WorkingDirectory=/home/ariel25621/soccer_monitor
-ExecStart=/home/ariel25621/soccer_monitor/venv/bin/python sma_crossover_bot.py
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/home/ubuntu/soccer_monitor
+ExecStart=/home/ubuntu/soccer_monitor/venv/bin/python sma_crossover_bot.py
 Restart=on-failure
 RestartSec=30
 LimitNOFILE=65536

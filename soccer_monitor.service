@@ -5,13 +5,12 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-# Replace 'ubuntu' with your actual username on the server (run 'whoami' to find out)
-User=ariel25621
-Group=ariel25621
+User=ubuntu
+Group=ubuntu
 
-# Updated to match your GCP username and folder name
-WorkingDirectory=/home/ariel25621/soccer_monitor
-ExecStart=/home/ariel25621/soccer_monitor/venv/bin/python soccer_monitor.py
+# Paths match the Oracle Cloud Ubuntu image default user
+WorkingDirectory=/home/ubuntu/soccer_monitor
+ExecStart=/home/ubuntu/soccer_monitor/venv/bin/python soccer_monitor.py
 
 Restart=on-failure
 RestartSec=10
