@@ -38,6 +38,10 @@ POLL_INTERVAL_MARKETS = int(os.getenv("POLL_INTERVAL_MARKETS", "900"))
 WS_RECONNECT_DELAY = int(os.getenv("WS_RECONNECT_DELAY", "5"))
 ALERT_COOLDOWN = int(os.getenv("ALERT_COOLDOWN", "1200"))
 SIMULATION_MODE = os.getenv("SIMULATION_MODE", "0") == "1"
+# Only scan events kicking off within this window of now; a match older than
+# KICKOFF_WINDOW_BEFORE_H has finished.
+KICKOFF_WINDOW_BEFORE_H = float(os.getenv("KICKOFF_WINDOW_BEFORE_H", "4"))
+KICKOFF_WINDOW_AFTER_H = float(os.getenv("KICKOFF_WINDOW_AFTER_H", "1"))
 
 logging.basicConfig(
     level=logging.INFO,
@@ -300,7 +304,7 @@ class MarketDiscovery:
         self.session = session
         self.live_match_tracker = live_match_tracker
         self.runtime_config = runtime_config
-        self.base_url = "https://gamma-api.polymarket.com/events"
+        self.base_url = "https://gamma-api.polymarket.com/events/keyset"
 
     def load_team_mapping(self) -> Dict[str, str]:
         if os.path.exists("team_mapping.json"):
@@ -390,23 +394,34 @@ class MarketDiscovery:
         markets_dict = {}
         skipped_not_live = 0
         
+        now = datetime.now(timezone.utc)
+        start_time_min = now - timedelta(hours=KICKOFF_WINDOW_BEFORE_H)
+        start_time_max = now + timedelta(hours=KICKOFF_WINDOW_AFTER_H)
+
         try:
-            offset = 0
             limit = 100
+            cursor = None
             while True:
                 params = {
-                    'active': 'true',
                     'closed': 'false',
                     'tag_slug': 'soccer',
                     'limit': str(limit),
-                    'offset': str(offset)
+                    'start_time_min': start_time_min.strftime('%Y-%m-%dT%H:%M:%SZ'),
+                    'start_time_max': start_time_max.strftime('%Y-%m-%dT%H:%M:%SZ')
                 }
+                # Keyset, not offset: Gamma rejects offset > 2000 with a 422.
+                if cursor:
+                    params['after_cursor'] = cursor
+
                 async with self.session.get(self.base_url, params=params) as response:
                     if response.status != 200:
-                        logger.error(f"Gamma API error: {response.status}")
+                        body = (await response.text())[:300]
+                        logger.error(f"Gamma API error: {response.status} - {body}")
                         break
-                    
-                    events = await response.json()
+
+                    payload = await response.json()
+                    events = payload.get('events') or []
+                    cursor = payload.get('next_cursor')
                     if not events:
                         break
 
@@ -465,9 +480,8 @@ class MarketDiscovery:
                                 except json.JSONDecodeError as e:
                                     logger.warning(f"Malformed JSON in market '{market.get('question', '?')}': {e}")
                     
-                    if len(events) < limit:
+                    if not cursor:
                         break
-                    offset += limit
 
         except Exception as e:
             logger.error(f"Exception fetching markets: {e}")

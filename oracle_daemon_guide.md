@@ -229,9 +229,6 @@ sudo systemctl restart soccer_monitor
 its timeout and then force-kills it. The unit ends up `failed (Result: timeout)` rather than
 `inactive`. Expected; the process does die.
 
-**`Gamma API error: 422` in the logs** — pre-existing, unrelated to the server. The Gamma query
-rejects some parameter; market discovery continues via the API-Football path.
-
 **Both bots silent for days** — they only speak on a threshold crossing, so check
 `systemctl status` before assuming it was a quiet week.
 

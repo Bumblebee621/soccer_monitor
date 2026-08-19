@@ -45,6 +45,8 @@ ASK_PRICE_MIN="0.01"             # Minimum price to avoid noise
 POLL_INTERVAL_MARKETS="900"      # Seconds between API-Football / Gamma API market discovery polls
 WS_RECONNECT_DELAY="5"           # Seconds to wait before reconnecting WebSocket
 ALERT_COOLDOWN="1200"            # Seconds to wait before alerting again for the same token
+KICKOFF_WINDOW_BEFORE_H="4"      # Only scan events that kicked off within this many hours
+KICKOFF_WINDOW_AFTER_H="1"       # ...or that kick off within this many hours
 
 # Simulation
 SIMULATION_MODE="0"              # Set to 1 to run mock data
