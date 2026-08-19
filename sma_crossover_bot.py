@@ -2,9 +2,9 @@
 S&P 500 — 150-Day SMA Crossover Alert Bot
 
 Scans all S&P 500 stocks for price crossovers above the 150-day Simple Moving
-Average. Sends Telegram alerts with mini-charts. Runs 3× daily on weekdays.
+Average. Sends Telegram alerts with mini-charts. Runs 2× daily on weekdays.
 
-Schedule: 16:30, 18:30, 22:00 IDT (Asia/Jerusalem), Monday–Friday.
+Schedule: 16:35, 18:30 IDT (Asia/Jerusalem), Monday–Friday.
 """
 
 import argparse
@@ -445,11 +445,11 @@ def scan_stocks(dry_run: bool = False, persist_state: bool = True) -> None:
 # ---------------------------------------------------------------------------
 
 def run_scheduler(dry_run: bool = False) -> None:
-    """Start the APScheduler daemon with the three daily triggers."""
+    """Start the APScheduler daemon with the two daily triggers."""
     scheduler = BlockingScheduler()
 
-    # Three scheduled scans: 16:35, 18:30, 22:00 IDT — Mon-Fri
-    times = [("16", "35"), ("18", "30"), ("22", "0")]
+    # Two scheduled scans: 16:35, 18:30 IDT — Mon-Fri
+    times = [("16", "35"), ("18", "30")]
     for hour, minute in times:
         trigger = CronTrigger(
             hour=hour,
