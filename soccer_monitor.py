@@ -713,7 +713,11 @@ class OrderBookMonitor:
             asset_id = data.get("asset_id")
             asks = data.get("asks", [])
             
-            if asset_id and asks:
+            if asset_id:
+                # A snapshot with no asks means the book emptied, not that there is
+                # nothing to say. Skipping it used to leave the previous levels in
+                # place, and the removed low ask would then fire a dip alert on a
+                # price that no longer exists.
                 self.book_state[asset_id] = {float(ask.get("price", "1.0")): float(ask.get("size", "0.0")) for ask in asks}
                 lowest_ask = min(self.book_state[asset_id].keys(), default=1.0)
                 
@@ -802,6 +806,14 @@ class OrderBookMonitor:
                 async with ws_context as ws:
                     await ws.send(json.dumps(subscription_message))
                     logger.info("Subscribed to market channels.")
+
+                    # Anything cached from before this connection is stale: level
+                    # removals that happened during the gap were never delivered, so a
+                    # withdrawn low ask would survive the reconnect and alert on a price
+                    # that is gone. This also drops books for tokens that set_markets
+                    # has since dropped, which otherwise accumulate for the process's
+                    # lifetime.
+                    self.book_state.clear()
                     
                     ws_task = asyncio.create_task(self._read_ws(ws))
                     event_task = asyncio.create_task(self.markets_changed_event.wait())
