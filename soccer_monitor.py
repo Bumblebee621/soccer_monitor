@@ -805,15 +805,29 @@ class OrderBookMonitor:
                     
                     ws_task = asyncio.create_task(self._read_ws(ws))
                     event_task = asyncio.create_task(self.markets_changed_event.wait())
-                    
-                    done, pending = await asyncio.wait(
-                        [ws_task, event_task],
-                        return_when=asyncio.FIRST_COMPLETED
-                    )
-                    
-                    for task in pending:
-                        task.cancel()
-                        
+                    tasks = [ws_task, event_task]
+
+                    try:
+                        done, _ = await asyncio.wait(
+                            tasks,
+                            return_when=asyncio.FIRST_COMPLETED
+                        )
+                    finally:
+                        # Cancel and reap both children on every exit path, this
+                        # coroutine being cancelled at shutdown included. An orphaned
+                        # task's exception is reported by asyncio at ERROR when it is
+                        # collected, and ErrorAlertHandler sits on the root logger, so
+                        # a plain systemd restart would page as a daemon error.
+                        for task in tasks:
+                            task.cancel()
+                        await asyncio.gather(*tasks, return_exceptions=True)
+
+                    # Re-raise whatever finished the wait. Without this a disconnect
+                    # stays parked on the task object and never reaches the handlers
+                    # below, so the socket silently reconnects with nothing logged.
+                    for task in done:
+                        task.result()
+
                     if self.markets_changed_event.is_set():
                         logger.info("Markets changed, reconnecting WS...")
                         continue # Reconnect
