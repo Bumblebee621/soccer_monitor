@@ -73,6 +73,17 @@ def parse_goal_threshold(question: str) -> Optional[float]:
     return None
 
 
+def parse_game_total_line(question: str) -> Optional[float]:
+    """Returns the goal line for a whole-game total, or None for any other market.
+
+    Whole-game totals are titled "<Home> vs. <Away>: O/U <line>". Anything else
+    after the colon is a per-team, per-half or corners line ("Viking FK O/U 1.5",
+    "1st Half O/U 2.5", "O/U 3.5 Corners").
+    """
+    match = re.fullmatch(r'o/u (\d+(?:\.\d+)?)', question.lower().split(': ')[-1].strip())
+    return float(match.group(1)) if match else None
+
+
 @dataclass
 class MarketInfo:
     event_title: str
@@ -443,10 +454,10 @@ class MarketDiscovery:
                         league = league_tags[0] if league_tags else "General Soccer"
                         
                         for market in event.get('markets', []):
-                            question = market.get('question', '').lower()
-                            if ("total goals" in question or "over/under" in question or "o/u" in question) and "corners" not in question:
+                            line = parse_game_total_line(market.get('question', ''))
+                            if line is not None:
                                 # Skip specific goal lines requested by user
-                                if "0.5" in question or "5.5" in question:
+                                if line in (0.5, 5.5):
                                     continue
                                 
                                 # Removed Market-level gameStartTime check as API-Football is now source of truth
