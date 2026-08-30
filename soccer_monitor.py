@@ -39,6 +39,10 @@ WS_RECONNECT_DELAY = int(os.getenv("WS_RECONNECT_DELAY", "5"))
 ALERT_COOLDOWN = int(os.getenv("ALERT_COOLDOWN", "1200"))
 # A failing call site alerts at most once per this many seconds.
 ERROR_ALERT_COOLDOWN = int(os.getenv("ERROR_ALERT_COOLDOWN", "3600"))
+# A failed daily-schedule fetch is retried on the next scan, up to this many attempts.
+# Each attempt spends 2 of API-Football's 100 daily calls, and discovery_loop runs every
+# 15 minutes across a 12-hour window, so an unbounded retry would spend the whole quota.
+MAX_SCHEDULE_FETCH_ATTEMPTS = int(os.getenv("MAX_SCHEDULE_FETCH_ATTEMPTS", "5"))
 SIMULATION_MODE = os.getenv("SIMULATION_MODE", "0") == "1"
 # Only scan events kicking off within this window of now; a match older than
 # KICKOFF_WINDOW_BEFORE_H has finished.
@@ -127,7 +131,9 @@ class LiveMatchTracker:
         self.base_url = "https://v3.football.api-sports.io/"
         self.headers = {'x-apisports-key': self.api_key} if self.api_key else {}
         self.daily_fixtures = []  # every league worldwide; read via active_fixtures()
-        self.last_fetch_date = None  # YYYY-MM-DD string
+        self.last_fetch_date = None  # YYYY-MM-DD string, set only once a fetch succeeds
+        self.fetch_attempt_date = None  # the day fetch_attempts is counting
+        self.fetch_attempts = 0
 
     async def fetch_daily_schedule(self):
         """Fetches daily schedule for today and tomorrow and filters locally."""
@@ -157,8 +163,17 @@ class LiveMatchTracker:
             (now_idt + timedelta(days=1)).strftime('%Y-%m-%d')
         ]
 
+        today = now_idt.strftime('%Y-%m-%d')
+        if self.fetch_attempt_date != today:
+            self.fetch_attempt_date = today
+            self.fetch_attempts = 0
+        self.fetch_attempts += 1
+
         fetched_fixtures = []
         global_fixture_count = 0  # raw count, including entries dropped as malformed
+        dates_ok = 0  # dates API-Football actually answered for
+        terminal = False  # an errors block is quota or a bad key; retrying cannot help
+        will_retry = False
 
         try:
             for date_str in dates_to_fetch:
@@ -177,8 +192,10 @@ class LiveMatchTracker:
                     api_errors = data.get("errors", {})
                     if api_errors:
                         logger.error(f"API-Football response errors: {api_errors}")
+                        terminal = True
                         continue
 
+                    dates_ok += 1
                     fixtures_list = data.get("response", [])
                     global_fixture_count += len(fixtures_list)
                     logger.info(f"Retrieved {len(fixtures_list)} total global fixtures for {date_str}.")
@@ -204,6 +221,8 @@ class LiveMatchTracker:
 
             self.daily_fixtures = fetched_fixtures
             active_count = len(self.active_fixtures())
+            will_retry = (not dates_ok and not terminal
+                          and self.fetch_attempts < MAX_SCHEDULE_FETCH_ATTEMPTS)
             if active_count:
                 logger.info(
                     f"Cached {len(fetched_fixtures)} fixtures, "
@@ -216,6 +235,13 @@ class LiveMatchTracker:
                     f"None of the {global_fixture_count} fixtures on {' and '.join(dates_to_fetch)} "
                     f"belong to the active leagues. Nothing to monitor today."
                 )
+            elif will_retry:
+                # A transient upstream failure. Say so at WARNING and try again on the
+                # next scan rather than staying blind for the rest of the day.
+                logger.warning(
+                    f"Daily schedule fetch failed (attempt {self.fetch_attempts} of "
+                    f"{MAX_SCHEDULE_FETCH_ATTEMPTS}). Retrying on the next scan."
+                )
             else:
                 # No fixtures for any league worldwide is not an off-season lull, it is a
                 # failed fetch — and it leaves the daemon blind until tomorrow, saying so
@@ -225,10 +251,16 @@ class LiveMatchTracker:
                     f"no market will be monitored until the next daily fetch. "
                     f"Usually the daily quota."
                 )
-            self.last_fetch_date = now_idt.strftime('%Y-%m-%d')
 
         except Exception as e:
             logger.error(f"Exception fetching daily schedule: {e}")
+            will_retry = self.fetch_attempts < MAX_SCHEDULE_FETCH_ATTEMPTS
+
+        # Only a day that actually produced a schedule counts as fetched. Marking a
+        # failed day as fetched left the daemon blind until tomorrow over a single
+        # non-200; retrying without a bound would spend the daily quota instead.
+        if not will_retry:
+            self.last_fetch_date = today
 
     def active_fixtures(self) -> list:
         """Cached fixtures belonging to the currently active leagues.
