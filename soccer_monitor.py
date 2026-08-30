@@ -37,6 +37,8 @@ ASK_PRICE_MIN = float(os.getenv("ASK_PRICE_MIN", "0.01"))
 POLL_INTERVAL_MARKETS = int(os.getenv("POLL_INTERVAL_MARKETS", "900"))
 WS_RECONNECT_DELAY = int(os.getenv("WS_RECONNECT_DELAY", "5"))
 ALERT_COOLDOWN = int(os.getenv("ALERT_COOLDOWN", "1200"))
+# A failing call site alerts at most once per this many seconds.
+ERROR_ALERT_COOLDOWN = int(os.getenv("ERROR_ALERT_COOLDOWN", "3600"))
 SIMULATION_MODE = os.getenv("SIMULATION_MODE", "0") == "1"
 # Only scan events kicking off within this window of now; a match older than
 # KICKOFF_WINDOW_BEFORE_H has finished.
@@ -48,6 +50,52 @@ logging.basicConfig(
     format='%(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger("SoccerMonitor")
+
+# Attach to a log call that reports a failure in sending to Telegram, so that failure
+# does not itself get forwarded to Telegram.
+NO_TELEGRAM = {"no_telegram": True}
+
+
+class ErrorAlertHandler(logging.Handler):
+    """Queues every ERROR-level log record for delivery to Telegram.
+
+    Deduped by call site rather than message text: a fault that repeats with a changing
+    value (a status code, an exception string) still alerts once per cooldown. Sending
+    happens in error_alert_loop — emit() is called from synchronous logging code and
+    must not block or await.
+    """
+
+    def __init__(self, queue: "asyncio.Queue[str]"):
+        super().__init__(level=logging.ERROR)
+        self.queue = queue
+        self.last_sent: Dict[str, float] = {}
+
+    def emit(self, record: logging.LogRecord):
+        if getattr(record, "no_telegram", False):
+            return
+
+        site = f"{record.pathname}:{record.lineno}"
+        now = time.time()
+        if now - self.last_sent.get(site, 0) < ERROR_ALERT_COOLDOWN:
+            return
+        self.last_sent[site] = now
+
+        message = (
+            f"\u26a0\ufe0f <b>SOCCER MONITOR ERROR</b>\n\n"
+            f"{html.escape(record.getMessage())}\n\n"
+            f"<i>{html.escape(record.name)} \u2014 "
+            f"{html.escape(os.path.basename(record.pathname))}:{record.lineno}</i>"
+        )
+        try:
+            self.queue.put_nowait(message)
+        except asyncio.QueueFull:
+            pass  # already backed up with errors; one more adds nothing
+
+
+async def error_alert_loop(alert_engine: "AlertEngine", queue: "asyncio.Queue[str]"):
+    """Delivers what ErrorAlertHandler queued."""
+    while True:
+        await alert_engine.send_text(await queue.get())
 
 
 def parse_game_total_line(question: str) -> Optional[float]:
@@ -155,7 +203,15 @@ class LiveMatchTracker:
                                 })
 
             self.daily_fixtures = fetched_fixtures
-            logger.info(f"Successfully cached {len(self.daily_fixtures)} target league fixtures locally.")
+            if fetched_fixtures:
+                logger.info(f"Successfully cached {len(self.daily_fixtures)} target league fixtures locally.")
+            else:
+                # Without fixtures every event looks "not live", so the scan finds nothing
+                # all day and says so only at INFO. Worth waking someone for.
+                logger.error(
+                    "Cached 0 fixtures for the active leagues — no market will be monitored "
+                    "until the next daily fetch. Usually the API-Football daily quota."
+                )
             self.last_fetch_date = now_idt.strftime('%Y-%m-%d')
 
         except Exception as e:
@@ -268,23 +324,30 @@ class AlertEngine:
 
         logger.info(f"--- ALERT TRIGGERED ---\n{message}\n-----------------------")
 
-        if self.bot_token and self.chat_id:
-            try:
-                url = f"https://api.telegram.org/bot{self.bot_token}/sendMessage"
-                payload = {
-                    "chat_id": self.chat_id,
-                    "text": message,
-                    "parse_mode": "HTML"
-                }
-                async with self.session.post(url, json=payload) as response:
-                    if response.status != 200:
-                        logger.error(f"Failed to send Telegram alert: {response.status}")
-                    else:
-                        logger.info("Telegram alert sent successfully.")
-            except Exception as e:
-                logger.error(f"Exception sending Telegram alert: {e}")
-        else:
+        if await self.send_text(message):
+            logger.info("Telegram alert sent successfully.")
+
+    async def send_text(self, message: str) -> bool:
+        """Posts one pre-formatted HTML message to the configured chat."""
+        if not (self.bot_token and self.chat_id):
             logger.info("Telegram credentials not configured. Skipping Telegram notification.")
+            return False
+
+        try:
+            url = f"https://api.telegram.org/bot{self.bot_token}/sendMessage"
+            payload = {
+                "chat_id": self.chat_id,
+                "text": message,
+                "parse_mode": "HTML"
+            }
+            async with self.session.post(url, json=payload) as response:
+                if response.status != 200:
+                    logger.error(f"Failed to send Telegram message: {response.status}", extra=NO_TELEGRAM)
+                    return False
+                return True
+        except Exception as e:
+            logger.error(f"Exception sending Telegram message: {e}", extra=NO_TELEGRAM)
+            return False
 
 
 class MarketDiscovery:
@@ -716,6 +779,8 @@ async def main():
         
     markets_changed_event = asyncio.Event()
     runtime_config = RuntimeConfig()
+    error_queue: "asyncio.Queue[str]" = asyncio.Queue(maxsize=100)
+    logging.getLogger().addHandler(ErrorAlertHandler(error_queue))
     
     async with aiohttp.ClientSession() as session:
         live_match_tracker = LiveMatchTracker(session, runtime_config)
@@ -762,7 +827,7 @@ async def main():
                     logger.info(f"Resuming in {sleep_seconds/3600:.1f} hours.")
                     await asyncio.sleep(sleep_seconds)
                 
-        gather_list = [discovery_loop(), monitor.run()]
+        gather_list = [discovery_loop(), monitor.run(), error_alert_loop(alert_engine, error_queue)]
         if TELEGRAM_BOT_TOKEN:
             gather_list.append(start_bot_polling(TELEGRAM_BOT_TOKEN, runtime_config, TELEGRAM_CHAT_ID))
             
