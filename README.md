@@ -25,7 +25,7 @@ This tool is designed to find these momentary price drops immediately after an e
 2.  **Market Discovery**: Periodically queries Polymarket's Gamma REST API for active soccer markets. It filters these events to only include those matching the live teams currently playing.
 3.  **Monitoring**: Subscribes to the Polymarket WebSocket for the discovered "Under" tokens.
 4.  **Dip Detection & Verification**: When an `ASK` price drops below the threshold, it fetches the live score to verify the market isn't already dead.
-5.  **Alerting**: Sends a formatted alert to your Telegram chat with the match, market, lowest ask price, and the current score.
+5.  **Alerting**: Sends a formatted alert to your Telegram chat with the match, market, lowest ask price, and the current score. Each token alerts at most **once per day**, reset at midnight Israel time. This is not tunable, and deliberately so: every alert costs an API-Football call to fetch the score, and the free plan allows only 100 a day.
 
 ## Setup & Configuration
 
@@ -44,7 +44,6 @@ ASK_PRICE_THRESHOLD="0.10"       # Default global price at which to trigger a di
 ASK_PRICE_MIN="0.01"             # Minimum price to avoid noise
 POLL_INTERVAL_MARKETS="900"      # Seconds between API-Football / Gamma API market discovery polls
 WS_RECONNECT_DELAY="5"           # Seconds to wait before reconnecting WebSocket
-ALERT_COOLDOWN="1200"            # Seconds to wait before alerting again for the same token
 KICKOFF_WINDOW_BEFORE_H="4"      # Only scan events that kicked off within this many hours
 KICKOFF_WINDOW_AFTER_H="1"       # ...or that kick off within this many hours
 

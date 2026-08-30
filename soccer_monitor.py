@@ -37,7 +37,6 @@ ASK_PRICE_THRESHOLD = float(os.getenv("ASK_PRICE_THRESHOLD", "0.10"))
 ASK_PRICE_MIN = float(os.getenv("ASK_PRICE_MIN", "0.01"))
 POLL_INTERVAL_MARKETS = int(os.getenv("POLL_INTERVAL_MARKETS", "900"))
 WS_RECONNECT_DELAY = int(os.getenv("WS_RECONNECT_DELAY", "5"))
-ALERT_COOLDOWN = int(os.getenv("ALERT_COOLDOWN", "1200"))
 # A failing call site alerts at most once per this many seconds.
 ERROR_ALERT_COOLDOWN = int(os.getenv("ERROR_ALERT_COOLDOWN", "3600"))
 # A failed daily-schedule fetch is retried on the next scan, up to this many attempts.
