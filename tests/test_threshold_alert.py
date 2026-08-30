@@ -1,11 +1,19 @@
 """
-Quick test: Simulate a Premier League dip at $0.11 to verify
-the per-league threshold override (0.13) triggers an alert.
-Run on the server: python test_threshold_alert.py
+MANUAL smoke script -- not part of the automated suite.
+
+Simulates a Premier League dip at $0.11 to verify the per-league threshold override
+triggers an alert. It reads the live config_state.json, needs the Premier League
+threshold already set to 0.13 via the bot menu, and **sends a real Telegram message**.
+Run it deliberately, on the server:
+
+    python tests/test_threshold_alert.py
 """
 import asyncio
 import logging
 import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # pyrefly: ignore [missing-import]
 from dotenv import load_dotenv
 # pyrefly: ignore [missing-import]

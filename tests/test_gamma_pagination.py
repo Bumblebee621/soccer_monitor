@@ -41,7 +41,7 @@ def make_target_event():
         "slug": "arsenal-liverpool",
         "tags": [{"label": "Premier League"}],
         "markets": [{
-            "question": "Will there be over 2.5 total goals?",
+            "question": "Arsenal vs. Liverpool: O/U 2.5",
             "clobTokenIds": json.dumps(["OVER_TOKEN", TARGET_TOKEN]),
             "outcomes": json.dumps(["Over", "Under"]),
         }],
@@ -102,10 +102,19 @@ class FakeGammaSession:
 class FakeTracker:
     daily_fixtures = []
 
+    def active_fixtures(self):
+        return self.daily_fixtures
+
 
 class FakeConfig:
     def get_active_polymarket_tags(self):
         return {"premier league"}
+
+    def match_league_name(self, tag):
+        return "Premier League" if tag.lower() in ("premier league", "epl") else ""
+
+    def get_threshold(self, league_name):
+        return 0.10
 
 
 async def main():
