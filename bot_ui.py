@@ -36,7 +36,7 @@ class AuthMiddleware(BaseMiddleware):
         elif isinstance(event, CallbackQuery):
             chat_id = event.message.chat.id if event.message else None
 
-        if allowed_chat_id and chat_id != allowed_chat_id:
+        if allowed_chat_id is None or chat_id != allowed_chat_id:
             return  # silently ignore unauthorized users
 
         return await handler(event, data)
@@ -261,8 +261,19 @@ async def start_bot_polling(bot_token: str, runtime_config: RuntimeConfig, chat_
         try:
             allowed_chat_id = int(chat_id)
         except ValueError:
-            pass
-            
+            logger.error(f"TELEGRAM_CHAT_ID is not a number: {chat_id!r}")
+
+    if allowed_chat_id is None:
+        # Fail closed. Polling starts whenever the bot *token* alone is set, and this
+        # control panel can change thresholds and toggle leagues, so an unset or
+        # malformed chat id must stop the bot rather than open it to anyone who finds
+        # it. Alerts have nowhere to go without a chat id in any case.
+        logger.error(
+            "TELEGRAM_CHAT_ID is unset or not a number — refusing to start the control "
+            "bot, which would otherwise accept commands from any chat."
+        )
+        return
+
     bot = Bot(token=bot_token)
     dp = Dispatcher()
 
