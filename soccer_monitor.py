@@ -12,6 +12,7 @@ import time
 import difflib
 import html
 from datetime import datetime, timezone, timedelta
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 
@@ -54,6 +55,17 @@ logging.basicConfig(
     format='%(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger("SoccerMonitor")
+
+# Israel keeps UTC+3 in summer and UTC+2 in winter. A fixed UTC+3 ran the 13:00-01:00
+# active window and the midnight alert flush an hour early for roughly half the year.
+try:
+    ISRAEL_TZ = ZoneInfo("Asia/Jerusalem")
+except (ZoneInfoNotFoundError, OSError):
+    ISRAEL_TZ = timezone(timedelta(hours=3))
+    logger.error(
+        "Asia/Jerusalem is unavailable (no tzdata installed?) — falling back to a fixed "
+        "UTC+3, which runs an hour off outside daylight saving time."
+    )
 
 # Attach to a log call that reports a failure in sending to Telegram, so that failure
 # does not itself get forwarded to Telegram.
@@ -137,8 +149,7 @@ class LiveMatchTracker:
 
     async def fetch_daily_schedule(self):
         """Fetches daily schedule for today and tomorrow and filters locally."""
-        IDT = timezone(timedelta(hours=3))
-        now_idt = datetime.now(IDT)
+        now_idt = datetime.now(ISRAEL_TZ)
 
         if SIMULATION_MODE:
             now_utc = datetime.now(timezone.utc)
@@ -360,7 +371,7 @@ class AlertEngine:
     def clear_alert_history(self, date_str: str):
         self.last_alert_time.clear()
         self.last_flush_date = date_str
-        logger.info(f"New day detected: Alert history flushed for {date_str} at midnight IDT.")
+        logger.info(f"New day detected: Alert history flushed for {date_str} at midnight Israel time.")
 
     async def send_alert(self, market: MarketInfo, current_ask: float, score: str):
         if market.under_token_id in self.last_alert_time:
@@ -873,21 +884,18 @@ async def main():
         monitor = OrderBookMonitor(alert_engine, live_match_tracker, markets_changed_event, runtime_config)
         
         async def discovery_loop():
-            # IDT (Israel Daylight Time) is UTC+3
-            IDT = timezone(timedelta(hours=3))
-
             while True:
-                now_idt = datetime.now(IDT)
+                now_idt = datetime.now(ISRAEL_TZ)
                 hour = now_idt.hour
                 current_date_str = now_idt.strftime('%Y-%m-%d')
 
-                # Flush alert history at midnight IDT
+                # Flush alert history at midnight Israel time
                 if alert_engine.last_flush_date != current_date_str:
                     alert_engine.clear_alert_history(current_date_str)
 
-                # Active window: 13:00 - 01:00 IDT (i.e., hour >= 13 OR hour < 1)
+                # Active window: 13:00 - 01:00 Israel time (i.e., hour >= 13 OR hour < 1)
                 if SIMULATION_MODE or hour >= 13 or hour < 1:
-                    # Fetch daily schedule only starting at 13:00 IDT
+                    # Fetch daily schedule only starting at 13:00 Israel time
                     if SIMULATION_MODE or hour >= 13:
                         if live_match_tracker.last_fetch_date != current_date_str:
                             logger.info("Daily schedule not fetched today. Fetching daily schedule...")
@@ -899,15 +907,20 @@ async def main():
                     await monitor.set_markets(markets)
                     await asyncio.sleep(POLL_INTERVAL_MARKETS)
                 else:
-                    # Outside match hours — clear markets and sleep until 13:00 IDT
-                    logger.info(f"Outside active hours ({now_idt.strftime('%H:%M')} IDT). Sleeping until 13:00 IDT...")
+                    # Outside match hours — clear markets and sleep until 13:00 Israel time
+                    logger.info(f"Outside active hours ({now_idt.strftime('%H:%M')} Israel time). Sleeping until 13:00...")
                     await monitor.set_markets({})
 
-                    # Calculate seconds until 13:00 IDT today
+                    # Calculate seconds until 13:00 Israel time today
                     next_start = now_idt.replace(hour=13, minute=0, second=0, microsecond=0)
                     if next_start <= now_idt:
                         next_start += timedelta(days=1)
-                    sleep_seconds = (next_start - now_idt).total_seconds()
+                    # Subtracting two datetimes that share a tzinfo gives the
+                    # wall-clock difference, ignoring the zone. On the night the clocks
+                    # change that is an hour short and the daemon would resume at 12:00
+                    # local, so compare the two instants in UTC instead.
+                    sleep_seconds = (next_start.astimezone(timezone.utc)
+                                     - now_idt.astimezone(timezone.utc)).total_seconds()
                     logger.info(f"Resuming in {sleep_seconds/3600:.1f} hours.")
                     await asyncio.sleep(sleep_seconds)
                 
