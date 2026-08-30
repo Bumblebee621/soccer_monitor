@@ -126,7 +126,7 @@ class LiveMatchTracker:
         self.api_key = API_FOOTBALL_KEY
         self.base_url = "https://v3.football.api-sports.io/"
         self.headers = {'x-apisports-key': self.api_key} if self.api_key else {}
-        self.daily_fixtures = []  # List of {"fixture_id": int, "home_team": str, "away_team": str, "start_time": datetime}
+        self.daily_fixtures = []  # every league worldwide; read via active_fixtures()
         self.last_fetch_date = None  # YYYY-MM-DD string
 
     async def fetch_daily_schedule(self):
@@ -157,9 +157,8 @@ class LiveMatchTracker:
             (now_idt + timedelta(days=1)).strftime('%Y-%m-%d')
         ]
 
-        target_leagues = self.runtime_config.get_active_api_ids()
         fetched_fixtures = []
-        global_fixture_count = 0  # every league worldwide, before the active-league filter
+        global_fixture_count = 0  # raw count, including entries dropped as malformed
 
         try:
             for date_str in dates_to_fetch:
@@ -185,28 +184,31 @@ class LiveMatchTracker:
                     logger.info(f"Retrieved {len(fixtures_list)} total global fixtures for {date_str}.")
 
                     for item in fixtures_list:
-                        league_info = item.get("league", {})
-                        league_id = league_info.get("id")
-                        if league_id in target_leagues:
-                            fixture_info = item.get("fixture", {})
-                            fixture_id = fixture_info.get("id")
-                            timestamp = fixture_info.get("timestamp")
-                            teams_info = item.get("teams", {})
-                            home_name = teams_info.get("home", {}).get("name", "")
-                            away_name = teams_info.get("away", {}).get("name", "")
-                            
-                            if fixture_id and timestamp and home_name and away_name:
-                                start_time_utc = datetime.fromtimestamp(timestamp, timezone.utc)
-                                fetched_fixtures.append({
-                                    "fixture_id": fixture_id,
-                                    "home_team": home_name,
-                                    "away_team": away_name,
-                                    "start_time": start_time_utc
-                                })
+                        league_id = item.get("league", {}).get("id")
+                        fixture_info = item.get("fixture", {})
+                        fixture_id = fixture_info.get("id")
+                        timestamp = fixture_info.get("timestamp")
+                        teams_info = item.get("teams", {})
+                        home_name = teams_info.get("home", {}).get("name", "")
+                        away_name = teams_info.get("away", {}).get("name", "")
+
+                        if fixture_id and timestamp and home_name and away_name:
+                            start_time_utc = datetime.fromtimestamp(timestamp, timezone.utc)
+                            fetched_fixtures.append({
+                                "fixture_id": fixture_id,
+                                "league_id": league_id,
+                                "home_team": home_name,
+                                "away_team": away_name,
+                                "start_time": start_time_utc
+                            })
 
             self.daily_fixtures = fetched_fixtures
-            if fetched_fixtures:
-                logger.info(f"Successfully cached {len(self.daily_fixtures)} target league fixtures locally.")
+            active_count = len(self.active_fixtures())
+            if active_count:
+                logger.info(
+                    f"Cached {len(fetched_fixtures)} fixtures, "
+                    f"{active_count} in the active leagues."
+                )
             elif global_fixture_count:
                 # The active leagues are simply idle today — an off-season Saturday looks
                 # exactly like this, and API-Football is plainly answering.
@@ -228,13 +230,25 @@ class LiveMatchTracker:
         except Exception as e:
             logger.error(f"Exception fetching daily schedule: {e}")
 
+    def active_fixtures(self) -> list:
+        """Cached fixtures belonging to the currently active leagues.
+
+        Filtered on read rather than at fetch time: API-Football returns every
+        league in the same response either way, so a league toggled on in Telegram
+        takes effect on the next scan instead of the next day.
+        """
+        if SIMULATION_MODE:
+            return self.daily_fixtures
+        active = self.runtime_config.get_active_api_ids()
+        return [f for f in self.daily_fixtures if f.get("league_id") in active]
+
     def get_live_team_names(self) -> set:
         """Returns a set of all team names currently playing based on daily schedule."""
         now_utc = datetime.now(timezone.utc)
         live_teams = set()
         active_count = 0
         
-        for fixture in self.daily_fixtures:
+        for fixture in self.active_fixtures():
             start_time = fixture["start_time"]
             # Active window: kickoff <= current_time <= kickoff + 150 minutes
             end_time = start_time + timedelta(minutes=150)
@@ -409,7 +423,8 @@ class MarketDiscovery:
 
     def find_matching_fixture_id(self, event_title: str, team_mapping: Dict[str, str]) -> Optional[int]:
         """Matches Polymarket event title against cached daily fixtures deterministically using the mapping."""
-        if not self.live_match_tracker.daily_fixtures:
+        fixtures = self.live_match_tracker.active_fixtures()
+        if not fixtures:
             return None
 
         # Strip out side-market suffixes (e.g., " - Exact Score")
@@ -427,7 +442,7 @@ class MarketDiscovery:
         api_home = team_mapping.get(poly_home, poly_home)
         api_away = team_mapping.get(poly_away, poly_away)
 
-        for fixture in self.live_match_tracker.daily_fixtures:
+        for fixture in fixtures:
             f_home = fixture["home_team"]
             f_away = fixture["away_team"]
 

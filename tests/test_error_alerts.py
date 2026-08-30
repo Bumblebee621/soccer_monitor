@@ -143,7 +143,8 @@ async def main():
     finally:
         root.removeHandler(quiet_handler)
 
-    assert idle.daily_fixtures == [], "a league we do not follow must not be cached"
+    assert idle.active_fixtures() == [], "a league we do not follow must not be monitored"
+    assert idle.daily_fixtures, "the raw fetch is still cached, so toggling that league on takes effect at once"
     assert drain(quiet_queue) == [], "an idle league is not a failure and must not alert"
 
     print("OK: repeated faults alert once, distinct faults alert separately, no send loop")
