@@ -681,6 +681,7 @@ class OrderBookMonitor:
         self.runtime_config = runtime_config
         self.monitored_markets: Dict[str, MarketInfo] = {}
         self.book_state: Dict[str, Dict[float, float]] = {} # token_id -> {price: size}
+        self._idle_logged = False  # so "No markets to monitor" is said once, not every 10s
         self.markets_lock = asyncio.Lock()
         self.markets_changed_event = markets_changed_event
 
@@ -812,9 +813,15 @@ class OrderBookMonitor:
                     token_ids = list(self.monitored_markets.keys())
 
             if not have_markets:
-                logger.info("No markets to monitor. Waiting...")
+                # Say it once per idle stretch. At one line every 10 seconds this filled
+                # the journal through the whole overnight gap for no added information.
+                if not self._idle_logged:
+                    logger.info("No markets to monitor. Waiting...")
+                    self._idle_logged = True
                 await asyncio.sleep(10)
                 continue
+
+            self._idle_logged = False
             
             subscription_message = {
                 "assets_ids": token_ids,

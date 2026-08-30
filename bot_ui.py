@@ -248,9 +248,12 @@ async def process_league_threshold(message: Message, state: FSMContext):
 async def catch_all_message(message: Message, state: FSMContext):
     """Debug: catches any message that didn't match another handler."""
     current_state = await state.get_state()
+    # from_user is None for channel posts and some forwards, and this handler catches
+    # everything that fell through -- so it must not be the thing that raises.
+    from_id = message.from_user.id if message.from_user else None
     logger.warning(
         f"catch_all_message: text={message.text!r}, state={current_state}, "
-        f"chat_id={message.chat.id}, from_id={message.from_user.id}"
+        f"chat_id={message.chat.id}, from_id={from_id}"
     )
 
 

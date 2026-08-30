@@ -1,6 +1,7 @@
 import json
 import os
 import logging
+import tempfile
 from typing import Dict, List, Set
 
 logger = logging.getLogger("ConfigManager")
@@ -70,9 +71,24 @@ class RuntimeConfig:
             "active_leagues": self.active_leagues,
             "league_thresholds": self.league_thresholds,
         }
+        # Write a temporary file and rename it over the target. os.replace is
+        # atomic, so a crash mid-save leaves the previous config intact instead of a
+        # truncated file -- which load() would fail to parse and silently replace with
+        # the default league list, turning a bad moment into changed trading behaviour.
         try:
-            with open(self.filepath, 'w') as f:
-                json.dump(data, f, indent=4)
+            directory = os.path.dirname(self.filepath) or "."
+            fd, tmp_path = tempfile.mkstemp(dir=directory, prefix=".config_state-",
+                                            suffix=".tmp")
+            try:
+                with os.fdopen(fd, "w") as f:
+                    json.dump(data, f, indent=4)
+                    f.flush()
+                    os.fsync(f.fileno())
+                os.replace(tmp_path, self.filepath)
+            except Exception:
+                if os.path.exists(tmp_path):
+                    os.unlink(tmp_path)
+                raise
         except Exception as e:
             logger.error(f"Failed to save config: {e}")
 
