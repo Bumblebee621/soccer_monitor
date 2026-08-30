@@ -463,6 +463,27 @@ class MarketDiscovery:
                 
         return False
 
+    def _league_for_tags(self, tags: List[str]) -> str:
+        """Resolve a Gamma event's tags to a supported league name.
+
+        Picking "the first tag that is not Soccer/Sports/Featured/Games" relied on tag
+        order, which Gamma does not guarantee. Landing on a non-league tag made
+        match_league_name return "", so get_threshold silently fell back to the global
+        threshold and the whole per-league threshold feature did nothing for that
+        market. Every event that reaches here has already matched an active league's
+        tag, so the scan below resolves.
+        """
+        for tag in tags:
+            matched = self.runtime_config.match_league_name(tag)
+            if matched:
+                return matched
+
+        # Nothing recognised: keep a readable name for the alert text. get_threshold
+        # will not match it, which is correct -- there is no per-league value to use.
+        league_tags = [t for t in tags
+                       if t not in ('Soccer', 'Sports', 'Featured', 'Games')]
+        return league_tags[0] if league_tags else "General Soccer"
+
     def find_matching_fixture_id(self, event_title: str, team_mapping: Dict[str, str]) -> Optional[int]:
         """Matches Polymarket event title against cached daily fixtures deterministically using the mapping."""
         fixtures = self.live_match_tracker.active_fixtures()
@@ -558,8 +579,7 @@ class MarketDiscovery:
                             skipped_not_live += 1
                             continue
 
-                        league_tags = [t for t in tags if t not in ['Soccer', 'Sports', 'Featured', 'Games']]
-                        league = league_tags[0] if league_tags else "General Soccer"
+                        league = self._league_for_tags(tags)
                         
                         for market in event.get('markets', []):
                             line = parse_game_total_line(market.get('question', ''))
