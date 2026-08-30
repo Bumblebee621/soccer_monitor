@@ -50,29 +50,6 @@ logging.basicConfig(
 logger = logging.getLogger("SoccerMonitor")
 
 
-def parse_goal_threshold(question: str) -> Optional[float]:
-    if not question:
-        return None
-    question_lower = question.lower()
-    
-    # Match pattern: under/over/o/u [number] total goals or [number] goals
-    match = re.search(r'(?:under|over|o/u|u/o)\s*(\d+(?:\.\d+)?)\s*total\s*goals?', question_lower)
-    if match:
-        return float(match.group(1))
-        
-    match = re.search(r'(?:under|over|o/u|u/o)\s*(\d+(?:\.\d+)?)\s*goals?', question_lower)
-    if match:
-        return float(match.group(1))
-        
-    # Fallback: any number if "goal" is mentioned
-    if "goal" in question_lower:
-        match = re.search(r'(\d+(?:\.\d+)?)', question_lower)
-        if match:
-            return float(match.group(1))
-            
-    return None
-
-
 def parse_game_total_line(question: str) -> Optional[float]:
     """Returns the goal line for a whole-game total, or None for any other market.
 
@@ -566,7 +543,12 @@ class OrderBookMonitor:
             market = self.monitored_markets.get(token_id)
         if not market:
             return
-        
+
+        # Every dip tick lands here, but a token alerts at most once a day. Check that
+        # before spending an API-Football call: the free plan allows only 100 a day.
+        if token_id in self.alert_engine.last_alert_time:
+            return
+
         score = "N/A"
         if market.fixture_id:
             score = await self.live_match_tracker.fetch_live_score_on_demand(market.fixture_id)
@@ -584,9 +566,12 @@ class OrderBookMonitor:
                 total_goals = home_goals + away_goals
                 
                 # Parse goal threshold from question
-                threshold = parse_goal_threshold(market.market_question)
+                threshold = parse_game_total_line(market.market_question)
                 if threshold is not None:
                     if total_goals >= threshold:
+                        # Goals only go up, so this market stays dead for the rest of the
+                        # day. Record it like a sent alert so later ticks stop re-querying.
+                        self.alert_engine.last_alert_time[token_id] = time.time()
                         logger.info(
                             f"Suppressing false dip alert for {market.event_title} ({market.market_question}). "
                             f"Current score is {score} (total {total_goals} goals), which meets/exceeds the "
