@@ -159,6 +159,7 @@ class LiveMatchTracker:
 
         target_leagues = self.runtime_config.get_active_api_ids()
         fetched_fixtures = []
+        global_fixture_count = 0  # every league worldwide, before the active-league filter
 
         try:
             for date_str in dates_to_fetch:
@@ -180,6 +181,7 @@ class LiveMatchTracker:
                         continue
 
                     fixtures_list = data.get("response", [])
+                    global_fixture_count += len(fixtures_list)
                     logger.info(f"Retrieved {len(fixtures_list)} total global fixtures for {date_str}.")
 
                     for item in fixtures_list:
@@ -205,12 +207,21 @@ class LiveMatchTracker:
             self.daily_fixtures = fetched_fixtures
             if fetched_fixtures:
                 logger.info(f"Successfully cached {len(self.daily_fixtures)} target league fixtures locally.")
+            elif global_fixture_count:
+                # The active leagues are simply idle today — an off-season Saturday looks
+                # exactly like this, and API-Football is plainly answering.
+                logger.warning(
+                    f"None of the {global_fixture_count} fixtures on {' and '.join(dates_to_fetch)} "
+                    f"belong to the active leagues. Nothing to monitor today."
+                )
             else:
-                # Without fixtures every event looks "not live", so the scan finds nothing
-                # all day and says so only at INFO. Worth waking someone for.
+                # No fixtures for any league worldwide is not an off-season lull, it is a
+                # failed fetch — and it leaves the daemon blind until tomorrow, saying so
+                # only at INFO. Worth waking someone for.
                 logger.error(
-                    "Cached 0 fixtures for the active leagues — no market will be monitored "
-                    "until the next daily fetch. Usually the API-Football daily quota."
+                    f"API-Football returned no fixtures at all for {' and '.join(dates_to_fetch)} — "
+                    f"no market will be monitored until the next daily fetch. "
+                    f"Usually the daily quota."
                 )
             self.last_fetch_date = now_idt.strftime('%Y-%m-%d')
 

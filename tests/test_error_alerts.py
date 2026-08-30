@@ -39,6 +39,18 @@ class QuotaExhaustedSession:
         return {"errors": {"requests": "You have reached the request limit for the day"}}
 
 
+class OffSeasonSession(QuotaExhaustedSession):
+    """Answers normally, but every fixture belongs to a league we do not follow."""
+
+    async def json(self):
+        return {"response": [{
+            "league": {"id": 999},
+            "fixture": {"id": 1, "timestamp": 1756400000,
+                        "status": {"short": "NS", "elapsed": None}},
+            "teams": {"home": {"name": "Some FC"}, "away": {"name": "Other FC"}},
+        }]}
+
+
 class OneLeagueConfig:
     def get_active_api_ids(self):
         return [39]
@@ -114,13 +126,29 @@ async def main():
 
     alerts = drain(live_queue)
     assert tracker.daily_fixtures == [], "no fixtures should survive a quota failure"
-    # Two dates fail at one call site (1 alert), then the empty cache reports (1 alert).
-    assert len(alerts) == 2, f"expected the quota error and the empty cache, got {len(alerts)}"
+    # Two dates fail at one call site (1 alert), then the empty schedule reports (1 alert).
+    assert len(alerts) == 2, f"expected the quota error and the empty schedule, got {len(alerts)}"
     assert any("request limit" in a for a in alerts), alerts
-    assert any("Cached 0 fixtures" in a for a in alerts), alerts
+    assert any("no fixtures at all" in a for a in alerts), alerts
+
+    # The off-season case must stay silent: the active leagues have nothing on, but
+    # API-Football is answering, so there is no fault to report.
+    quiet_queue = asyncio.Queue(maxsize=100)
+    quiet_handler = ErrorAlertHandler(quiet_queue)
+    root.addHandler(quiet_handler)
+    try:
+        idle = soccer_monitor.LiveMatchTracker(OffSeasonSession(), OneLeagueConfig())
+        idle.api_key = "test-key"
+        await idle.fetch_daily_schedule()
+    finally:
+        root.removeHandler(quiet_handler)
+
+    assert idle.daily_fixtures == [], "a league we do not follow must not be cached"
+    assert drain(quiet_queue) == [], "an idle league is not a failure and must not alert"
 
     print("OK: repeated faults alert once, distinct faults alert separately, no send loop")
     print("OK: an exhausted API-Football quota reaches Telegram end to end")
+    print("OK: active leagues being idle stays silent")
 
 
 if __name__ == "__main__":
