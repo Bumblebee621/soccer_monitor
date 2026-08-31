@@ -687,8 +687,15 @@ class OrderBookMonitor:
 
     async def set_markets(self, markets: Dict[str, MarketInfo]):
         async with self.markets_lock:
+            # The socket subscribes by token id alone, so only a changed key set is
+            # worth a reconnect. Firing unconditionally tore down a healthy connection
+            # on every discovery poll and lost the book updates sent while it came back.
+            # A metadata-only change needs no reconnect: process_dip reads
+            # monitored_markets under this lock, so it already sees the new values.
+            changed = markets.keys() != self.monitored_markets.keys()
             self.monitored_markets = markets
-        self.markets_changed_event.set()
+        if changed:
+            self.markets_changed_event.set()
 
     async def process_dip(self, token_id: str, current_ask: float):
         async with self.markets_lock:
