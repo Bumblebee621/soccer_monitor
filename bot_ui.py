@@ -288,7 +288,12 @@ async def start_bot_polling(bot_token: str, runtime_config: RuntimeConfig, chat_
     
     logger.info("Starting aiogram polling loop...")
     try:
-        await dp.start_polling(bot)
+        # handle_signals defaults to True, which makes aiogram install its own SIGTERM
+        # handler -- replacing Python's default "terminate on SIGTERM". It stopped
+        # polling and returned, but nothing cancelled the daemon's other loops, so
+        # soccer_monitor hung until systemd SIGKILLed it 90s later on every restart.
+        # main() owns the signal now and cancels everything.
+        await dp.start_polling(bot, handle_signals=False)
     finally:
         logger.info("Shutting down aiogram bot session...")
         await bot.session.close()

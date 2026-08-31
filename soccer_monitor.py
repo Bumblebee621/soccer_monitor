@@ -8,6 +8,7 @@ import json
 import logging
 import os
 import re
+import signal
 import time
 import difflib
 import html
@@ -962,6 +963,17 @@ async def main():
             gather_list.append(start_bot_polling(TELEGRAM_BOT_TOKEN, runtime_config, TELEGRAM_CHAT_ID))
             
         tasks = asyncio.gather(*gather_list)
+
+        # Every loop above runs forever, so gather() only ever finished if one raised.
+        # Nothing cancelled them on SIGTERM -- aiogram installed a handler that merely
+        # stopped its own polling -- so systemd waited out its 90s stop timeout and
+        # SIGKILLed the daemon on every restart, and the handler below was dead code.
+        # Cancelling the gather propagates to each child, letting monitor.run() reap its
+        # WS tasks in the finally it already has.
+        loop = asyncio.get_running_loop()
+        for sig in (signal.SIGTERM, signal.SIGINT):
+            loop.add_signal_handler(sig, tasks.cancel)
+
         try:
             await tasks
         except asyncio.CancelledError:
