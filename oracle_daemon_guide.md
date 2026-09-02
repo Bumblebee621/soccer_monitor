@@ -106,9 +106,7 @@ cd soccer_monitor
 
 python3 -m venv venv
 ./venv/bin/pip install --upgrade pip
-./venv/bin/pip install \
-  requests pandas numpy matplotlib scipy websockets python-dotenv \
-  aiohttp aiogram yfinance apscheduler lxml
+./venv/bin/pip install -r requirements.txt
 ```
 
 ### 7. Copy over secrets and state

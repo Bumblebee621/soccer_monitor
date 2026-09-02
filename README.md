@@ -63,10 +63,11 @@ The Bot UI allows you to:
 
 ## Running the Daemon
 
-Ensure you have the required dependencies (or use the provided `shell.nix`).
+Dependencies are declared in `pyproject.toml` and pinned in `uv.lock`.
 
 ```bash
-python soccer_monitor.py
+uv sync
+uv run python soccer_monitor.py
 ```
 
 ## Deployment

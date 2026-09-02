@@ -1,0 +1,19 @@
+[project]
+name = "polymarket-margins"
+version = "0.1.0"
+requires-python = ">=3.10"
+dependencies = [
+    "aiogram",
+    "aiohttp",
+    "apscheduler",
+    "matplotlib",
+    "pandas",
+    "python-dotenv",
+    "requests",
+    "websockets",
+    "yfinance",
+]
+
+[tool.uv]
+# Scripts, not a library: sync the dependencies, don't build this repo.
+package = false
