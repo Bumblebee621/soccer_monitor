@@ -516,7 +516,13 @@ class MarketDiscovery:
 
         return None
 
-    async def fetch_markets(self, live_teams: set) -> Dict[str, MarketInfo]:
+    async def fetch_markets(self, live_teams: set) -> Optional[Dict[str, MarketInfo]]:
+        """Returns the live market set, or None if the scan failed.
+
+        None means "I do not know", not "there are no markets": a fault partway
+        through pagination leaves a truncated dict that looks authoritative to
+        set_markets, which would unsubscribe the websocket from live games.
+        """
         if SIMULATION_MODE:
             logger.info("SIMULATION: Returning mock markets.")
             return {
@@ -558,7 +564,7 @@ class MarketDiscovery:
                     if response.status != 200:
                         body = (await response.text())[:300]
                         logger.error(f"Gamma API error: {response.status} - {body}")
-                        break
+                        return None
 
                     payload = await response.json()
                     events = payload.get('events') or []
@@ -625,6 +631,7 @@ class MarketDiscovery:
 
         except Exception as e:
             logger.error(f"Exception fetching markets: {e}")
+            return None
             
         logger.info(
             f"Found {len(markets_dict)} live Over/Under markets "
@@ -938,7 +945,10 @@ async def main():
                     live_teams = live_match_tracker.get_live_team_names()
 
                     markets = await discovery.fetch_markets(live_teams)
-                    await monitor.set_markets(markets)
+                    # None = the scan failed. Keep the markets we already have
+                    # rather than telling the monitor every game just ended.
+                    if markets is not None:
+                        await monitor.set_markets(markets)
                     await asyncio.sleep(POLL_INTERVAL_MARKETS)
                 else:
                     # Outside match hours — clear markets and sleep until 13:00 Israel time

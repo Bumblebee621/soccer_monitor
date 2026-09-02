@@ -1,7 +1,13 @@
 """
-Regression test: Gamma /events caps offset at 2000, so the old offset loop
-silently truncated the market scan (422 -> break). Verifies we now traverse
-every page via /events/keyset and still find markets past the old cap.
+Two regressions, both "a failed scan looked like an answer".
+
+1. Gamma /events caps offset at 2000, so the old offset loop silently truncated the
+   market scan (422 -> break). We now traverse every page via /events/keyset and still
+   find markets past the old cap.
+2. A fault partway through pagination returned the markets gathered so far. discovery_loop
+   feeds that to set_markets as the authoritative live set, so a 500 on page 2 read as
+   "those games ended" and unsubscribed the websocket mid-match. Failure now returns None.
+
 Run: python tests/test_gamma_pagination.py
 """
 import asyncio
@@ -99,6 +105,18 @@ class FakeGammaSession:
         return FakeResponse(200, ALL_EVENTS[offset:offset + limit])
 
 
+class MidScanFailureSession(FakeGammaSession):
+    """Answers page 1, then 500s — the Gamma outage seen in production on 2026-09-02."""
+
+    def get(self, url, params=None):
+        params = params or {}
+        if params.get("after_cursor"):
+            self.requests.append((url, dict(params)))
+            return FakeResponse(500, {"type": "internal error",
+                                      "error": "internal server error"})
+        return super().get(url, params)
+
+
 class FakeTracker:
     daily_fixtures = []
 
@@ -138,6 +156,20 @@ async def main():
     if hit_capped_endpoint:
         failures.append("Still requesting /events with offset beyond the 2000 cap.")
 
+    # The daemon logs the 500 at ERROR; that is the alert working, not a test failure.
+    logging.getLogger("SoccerMonitor").setLevel(logging.CRITICAL)
+
+    failing_session = MidScanFailureSession()
+    failing_discovery = MarketDiscovery(failing_session, FakeTracker(), FakeConfig())
+    result = await failing_discovery.fetch_markets({"Arsenal", "Liverpool"})
+
+    if result is not None:
+        failures.append(
+            f"A 500 partway through the scan returned {len(result)} market(s) instead of "
+            "None. set_markets cannot tell that dict apart from a real empty scan, so it "
+            "would unsubscribe the websocket from every live game."
+        )
+
     if failures:
         for f in failures:
             logger.error(f"FAIL: {f}")
@@ -145,7 +177,7 @@ async def main():
 
     logger.info(
         f"PASS: traversed {len(session.requests)} page(s) and found the market "
-        f"at event #{TARGET_INDEX}."
+        f"at event #{TARGET_INDEX}; a mid-scan 500 returned None."
     )
 
 
