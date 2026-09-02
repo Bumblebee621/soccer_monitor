@@ -14,6 +14,9 @@ logger = logging.getLogger("BotUI")
 
 router = Router()
 config: RuntimeConfig = None
+# Set by start_bot_polling, like config. Typed loosely because soccer_monitor imports
+# this module, so importing ApiHealth from it here would be circular.
+health: Any = None
 allowed_chat_id: Optional[int] = None
 
 # Price thresholds on Polymarket are between 0 and 1
@@ -127,6 +130,10 @@ async def cb_menu_status(callback: CallbackQuery):
         f"Global Threshold: {config.global_threshold:.3f}\n"
         f"Custom Thresholds: {len(config.league_thresholds)}"
     )
+    if health is not None:
+        # Recorded from calls the daemon already makes — opening this menu costs no
+        # API call of its own, which matters for API-Football's 100/day.
+        text += "\n\n🔌 *API Health*\n" + "\n".join(health.status_lines())
     kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="⬅️ Back", callback_data="menu_main")]])
     await callback.message.edit_text(text, reply_markup=kb, parse_mode="Markdown")
     await callback.answer()
@@ -257,9 +264,11 @@ async def catch_all_message(message: Message, state: FSMContext):
     )
 
 
-async def start_bot_polling(bot_token: str, runtime_config: RuntimeConfig, chat_id: Optional[str]):
-    global config, allowed_chat_id
+async def start_bot_polling(bot_token: str, runtime_config: RuntimeConfig,
+                            chat_id: Optional[str], api_health: Any = None):
+    global config, allowed_chat_id, health
     config = runtime_config
+    health = api_health
     if chat_id:
         try:
             allowed_chat_id = int(chat_id)

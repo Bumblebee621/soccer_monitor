@@ -40,6 +40,10 @@ POLL_INTERVAL_MARKETS = int(os.getenv("POLL_INTERVAL_MARKETS", "900"))
 WS_RECONNECT_DELAY = int(os.getenv("WS_RECONNECT_DELAY", "5"))
 # A failing call site alerts at most once per this many seconds.
 ERROR_ALERT_COOLDOWN = int(os.getenv("ERROR_ALERT_COOLDOWN", "3600"))
+# An upstream that keeps failing this long pushes one Telegram alert. Below it the fault
+# is logged and shown in the status menu but not pushed: a blip on Polymarket's side is
+# not something to be woken for, a 30-minute outage during a match is.
+SUSTAINED_OUTAGE_ALERT = int(os.getenv("SUSTAINED_OUTAGE_ALERT", "1800"))
 # A failed daily-schedule fetch is retried on the next scan, up to this many attempts.
 # Each attempt spends 2 of API-Football's 100 daily calls, and discovery_loop runs every
 # 15 minutes across a 12-hour window, so an unbounded retry would spend the whole quota.
@@ -114,6 +118,132 @@ async def error_alert_loop(alert_engine: "AlertEngine", queue: "asyncio.Queue[st
         await alert_engine.send_text(await queue.get())
 
 
+# The faults that are the network's rather than ours. Anything else arriving at one of
+# the broad `except Exception` handlers is a bug in this file and still pages at once.
+NETWORK_ERRORS = (aiohttp.ClientError, asyncio.TimeoutError, websockets.WebSocketException)
+
+# Display order for the status menu. Insertion order would depend on which upstream
+# happened to answer first.
+DEP_API_FOOTBALL = "API-Football"
+DEP_GAMMA = "Polymarket Gamma"
+DEP_WS = "Market websocket"
+DEP_TELEGRAM = "Telegram"
+DEPENDENCIES = (DEP_API_FOOTBALL, DEP_GAMMA, DEP_WS, DEP_TELEGRAM)
+
+
+def _ago(ts: Optional[float]) -> str:
+    """"3h ago" / "2m ago" — coarse is the point, this is a glance, not a log."""
+    if ts is None:
+        return "never"
+    secs = max(0, int(time.time() - ts))
+    if secs < 60:
+        return "just now"
+    if secs < 3600:
+        return f"{secs // 60}m ago"
+    if secs < 86400:
+        return f"{secs // 3600}h ago"
+    return f"{secs // 86400}d ago"
+
+
+@dataclass
+class DependencyHealth:
+    ok: Optional[bool] = None  # None until the daemon has actually called it
+    last_ok: Optional[float] = None
+    last_fail: Optional[float] = None
+    detail: str = ""
+    failing_since: Optional[float] = None
+    alerted: bool = False
+
+
+class ApiHealth:
+    """Last-known state of each upstream, recorded from calls the daemon already makes.
+
+    Costs no API calls of its own, which is the whole design: every dependency is
+    contacted on its own schedule anyway — API-Football daily, Gamma every scan, the
+    websocket continuously, Telegram on every send — so health is a by-product of those
+    calls. status_lines() reads recorded state; it never probes.
+    """
+
+    def __init__(self):
+        self.deps: Dict[str, DependencyHealth] = {}
+        self.quota_remaining: Optional[int] = None  # API-Football calls left today
+
+    def _dep(self, name: str) -> DependencyHealth:
+        return self.deps.setdefault(name, DependencyHealth())
+
+    def ok(self, name: str, detail: str = ""):
+        dep = self._dep(name)
+        dep.ok = True
+        dep.last_ok = time.time()
+        dep.detail = detail
+        dep.failing_since = None
+        dep.alerted = False
+
+    def fail(self, name: str, detail: str,
+             exc: Optional[BaseException] = None) -> Dict[str, bool]:
+        """Records a failure and returns the `extra` for the log call reporting it.
+
+        NO_TELEGRAM while the fault still looks transient, so an upstream blip no longer
+        pushes. An empty dict — which lets ErrorAlertHandler through — once the outage
+        has lasted SUSTAINED_OUTAGE_ALERT, and immediately when `exc` is one of ours
+        rather than the network's, because silencing our own bugs is not the goal.
+        """
+        now = time.time()
+        dep = self._dep(name)
+        dep.ok = False
+        dep.last_fail = now
+        dep.detail = detail
+        if dep.failing_since is None:
+            dep.failing_since = now
+
+        if exc is not None and not isinstance(exc, NETWORK_ERRORS):
+            return {}
+
+        if not dep.alerted and now - dep.failing_since >= SUSTAINED_OUTAGE_ALERT:
+            dep.alerted = True  # one push per outage, not one per scan
+            return {}
+
+        return NO_TELEGRAM
+
+    def note_quota(self, response):
+        """API-Football reports the day's remaining allowance on every response.
+
+        Never raises. This is a diagnostic sitting in the middle of the fetch path, and
+        an unreadable header must not become a failed schedule fetch.
+        """
+        try:
+            headers = getattr(response, "headers", None) or {}
+            self.quota_remaining = int(headers.get("x-ratelimit-requests-remaining"))
+        except (AttributeError, TypeError, ValueError):
+            pass
+
+    def status_lines(self) -> List[str]:
+        """One display line per dependency, safe to drop into a Markdown message."""
+        lines = []
+        for name in DEPENDENCIES:
+            dep = self.deps.get(name)
+            if dep is None or dep.ok is None:
+                lines.append(f"\u25ab\ufe0f {name} \u2014 not called yet")
+                continue
+
+            # Details carry status codes and exception text; a stray _ or * would break
+            # the whole message's Markdown parse.
+            detail = re.sub(r'[_*`\[\]]', '', dep.detail)
+            if dep.ok:
+                extra = f" \u00b7 {detail}" if detail else ""
+                lines.append(f"\u2705 {name} \u2014 ok {_ago(dep.last_ok)}{extra}")
+            else:
+                down = _ago(dep.failing_since).replace(" ago", "").replace("just now", "<1m")
+                lines.append(
+                    f"\u274c {name} \u2014 {detail or 'failing'}, down {down} "
+                    f"(ok {_ago(dep.last_ok)})"
+                )
+
+        if self.quota_remaining is not None:
+            lines.append(f"\U0001f4b3 API-Football quota: {self.quota_remaining}/100 left today")
+        return lines
+
+
 def parse_game_total_line(question: str) -> Optional[float]:
     """Returns the goal line for a whole-game total, or None for any other market.
 
@@ -136,9 +266,11 @@ class MarketInfo:
 
 
 class LiveMatchTracker:
-    def __init__(self, session: aiohttp.ClientSession, runtime_config: RuntimeConfig):
+    def __init__(self, session: aiohttp.ClientSession, runtime_config: RuntimeConfig,
+                 health: Optional["ApiHealth"] = None):
         self.session = session
         self.runtime_config = runtime_config
+        self.health = health or ApiHealth()
         self.api_key = API_FOOTBALL_KEY
         self.base_url = "https://v3.football.api-sports.io/"
         self.headers = {'x-apisports-key': self.api_key} if self.api_key else {}
@@ -194,19 +326,28 @@ class LiveMatchTracker:
                 
                 async with self.session.get(url, headers=self.headers, params=params) as response:
                     if response.status != 200:
-                        logger.error(f"API-Football error: {response.status}")
+                        logger.error(
+                            f"API-Football error: {response.status}",
+                            extra=self.health.fail(DEP_API_FOOTBALL, f"HTTP {response.status}")
+                        )
                         continue
-                    
+
+                    self.health.note_quota(response)
                     data = await response.json()
                     
                     # API-Football may return 200 with an errors block inside the JSON
                     api_errors = data.get("errors", {})
                     if api_errors:
+                        # Recorded so the status panel shows this red rather than stale
+                        # green. The log call keeps its default extra: a spent quota is
+                        # our problem, not the network's, and still pages immediately.
+                        self.health.fail(DEP_API_FOOTBALL, f"API error: {api_errors}")
                         logger.error(f"API-Football response errors: {api_errors}")
                         terminal = True
                         continue
 
                     dates_ok += 1
+                    self.health.ok(DEP_API_FOOTBALL)
                     fixtures_list = data.get("response", [])
                     global_fixture_count += len(fixtures_list)
                     logger.info(f"Retrieved {len(fixtures_list)} total global fixtures for {date_str}.")
@@ -264,7 +405,10 @@ class LiveMatchTracker:
                 )
 
         except Exception as e:
-            logger.error(f"Exception fetching daily schedule: {e}")
+            logger.error(
+                f"Exception fetching daily schedule: {e}",
+                extra=self.health.fail(DEP_API_FOOTBALL, f"{type(e).__name__}: {e}", exc=e)
+            )
             will_retry = self.fetch_attempts < MAX_SCHEDULE_FETCH_ATTEMPTS
 
         # Only a day that actually produced a schedule counts as fetched. Marking a
@@ -323,10 +467,16 @@ class LiveMatchTracker:
                     return "[Error: API-Football daily quota of 100 calls reached]"
                 
                 if response.status != 200:
-                    logger.error(f"API-Football score query HTTP error: {response.status}")
+                    logger.error(
+                        f"API-Football score query HTTP error: {response.status}",
+                        extra=self.health.fail(DEP_API_FOOTBALL, f"HTTP {response.status}")
+                    )
                     return f"[Error: API-Football HTTP {response.status}]"
 
+                self.health.ok(DEP_API_FOOTBALL)
+
                 # Check rate limit headers
+                self.health.note_quota(response)
                 remaining = response.headers.get('x-ratelimit-requests-remaining')
                 if remaining == '0':
                     logger.warning("API-Football requests remaining is 0. Daily quota reached.")
@@ -356,12 +506,16 @@ class LiveMatchTracker:
                 return f"{home_goals}-{away_goals} ({elapsed}' {status})"
 
         except Exception as e:
-            logger.error(f"Exception fetching live score for fixture {fixture_id}: {e}")
+            logger.error(
+                f"Exception fetching live score for fixture {fixture_id}: {e}",
+                extra=self.health.fail(DEP_API_FOOTBALL, f"{type(e).__name__}: {e}", exc=e)
+            )
             return f"[Error: Exception - {str(e)}]"
 
 
 class AlertEngine:
-    def __init__(self, session: aiohttp.ClientSession):
+    def __init__(self, session: aiohttp.ClientSession, health: Optional["ApiHealth"] = None):
+        self.health = health or ApiHealth()
         self.session = session
         self.bot_token = TELEGRAM_BOT_TOKEN
         self.chat_id = TELEGRAM_CHAT_ID
@@ -410,16 +564,21 @@ class AlertEngine:
             }
             async with self.session.post(url, json=payload) as response:
                 if response.status != 200:
+                    self.health.fail(DEP_TELEGRAM, f"HTTP {response.status}")
                     logger.error(f"Failed to send Telegram message: {response.status}", extra=NO_TELEGRAM)
                     return False
+                self.health.ok(DEP_TELEGRAM)
                 return True
         except Exception as e:
+            self.health.fail(DEP_TELEGRAM, f"{type(e).__name__}: {e}", exc=e)
             logger.error(f"Exception sending Telegram message: {e}", extra=NO_TELEGRAM)
             return False
 
 
 class MarketDiscovery:
-    def __init__(self, session: aiohttp.ClientSession, live_match_tracker: LiveMatchTracker, runtime_config: RuntimeConfig):
+    def __init__(self, session: aiohttp.ClientSession, live_match_tracker: LiveMatchTracker,
+                 runtime_config: RuntimeConfig, health: Optional["ApiHealth"] = None):
+        self.health = health or ApiHealth()
         self.session = session
         self.live_match_tracker = live_match_tracker
         self.runtime_config = runtime_config
@@ -563,9 +722,13 @@ class MarketDiscovery:
                 async with self.session.get(self.base_url, params=params) as response:
                     if response.status != 200:
                         body = (await response.text())[:300]
-                        logger.error(f"Gamma API error: {response.status} - {body}")
+                        logger.error(
+                            f"Gamma API error: {response.status} - {body}",
+                            extra=self.health.fail(DEP_GAMMA, f"HTTP {response.status}")
+                        )
                         return None
 
+                    self.health.ok(DEP_GAMMA)
                     payload = await response.json()
                     events = payload.get('events') or []
                     cursor = payload.get('next_cursor')
@@ -630,7 +793,10 @@ class MarketDiscovery:
                         break
 
         except Exception as e:
-            logger.error(f"Exception fetching markets: {e}")
+            logger.error(
+                f"Exception fetching markets: {e}",
+                extra=self.health.fail(DEP_GAMMA, f"{type(e).__name__}: {e}", exc=e)
+            )
             return None
             
         logger.info(
@@ -682,7 +848,10 @@ class SimulatedWebsocket:
             await asyncio.sleep(60)
 
 class OrderBookMonitor:
-    def __init__(self, alert_engine: AlertEngine, live_match_tracker: LiveMatchTracker, markets_changed_event: asyncio.Event, runtime_config: RuntimeConfig):
+    def __init__(self, alert_engine: AlertEngine, live_match_tracker: LiveMatchTracker,
+                 markets_changed_event: asyncio.Event, runtime_config: RuntimeConfig,
+                 health: Optional["ApiHealth"] = None):
+        self.health = health or ApiHealth()
         self.ws_url = "wss://ws-subscriptions-clob.polymarket.com/ws/market"
         self.alert_engine = alert_engine
         self.live_match_tracker = live_match_tracker
@@ -858,6 +1027,7 @@ class OrderBookMonitor:
                 async with ws_context as ws:
                     await ws.send(json.dumps(subscription_message))
                     logger.info("Subscribed to market channels.")
+                    self.health.ok(DEP_WS, f"{len(token_ids)} tokens")
 
                     # Anything cached from before this connection is stale: level
                     # removals that happened during the gap were never delivered, so a
@@ -896,10 +1066,14 @@ class OrderBookMonitor:
                         logger.info("Markets changed, reconnecting WS...")
                         continue # Reconnect
                         
-            except websockets.ConnectionClosed:
+            except websockets.ConnectionClosed as e:
+                self.health.fail(DEP_WS, "disconnected", exc=e)
                 logger.warning("WebSocket connection closed. Reconnecting...")
             except Exception as e:
-                logger.error(f"WebSocket error: {e}. Reconnecting...")
+                logger.error(
+                    f"WebSocket error: {e}. Reconnecting...",
+                    extra=self.health.fail(DEP_WS, f"{type(e).__name__}: {e}", exc=e)
+                )
                 
             await asyncio.sleep(WS_RECONNECT_DELAY)
 
@@ -915,14 +1089,16 @@ async def main():
         
     markets_changed_event = asyncio.Event()
     runtime_config = RuntimeConfig()
+    api_health = ApiHealth()
     error_queue: "asyncio.Queue[str]" = asyncio.Queue(maxsize=100)
     logging.getLogger().addHandler(ErrorAlertHandler(error_queue))
     
     async with aiohttp.ClientSession() as session:
-        live_match_tracker = LiveMatchTracker(session, runtime_config)
-        discovery = MarketDiscovery(session, live_match_tracker, runtime_config)
-        alert_engine = AlertEngine(session)
-        monitor = OrderBookMonitor(alert_engine, live_match_tracker, markets_changed_event, runtime_config)
+        live_match_tracker = LiveMatchTracker(session, runtime_config, api_health)
+        discovery = MarketDiscovery(session, live_match_tracker, runtime_config, api_health)
+        alert_engine = AlertEngine(session, api_health)
+        monitor = OrderBookMonitor(alert_engine, live_match_tracker, markets_changed_event,
+                                   runtime_config, api_health)
         
         async def discovery_loop():
             while True:
@@ -970,7 +1146,8 @@ async def main():
                 
         gather_list = [discovery_loop(), monitor.run(), error_alert_loop(alert_engine, error_queue)]
         if TELEGRAM_BOT_TOKEN:
-            gather_list.append(start_bot_polling(TELEGRAM_BOT_TOKEN, runtime_config, TELEGRAM_CHAT_ID))
+            gather_list.append(start_bot_polling(TELEGRAM_BOT_TOKEN, runtime_config,
+                                                TELEGRAM_CHAT_ID, api_health))
             
         tasks = asyncio.gather(*gather_list)
 
