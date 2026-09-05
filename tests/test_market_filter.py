@@ -13,7 +13,8 @@ from soccer_monitor import parse_game_total_line
 KEEP = {
     "Viking FK vs. Aalesunds FK: O/U 2.5": 2.5,
     "1. FC Cologne vs. Hertha BSC: O/U 3.5": 3.5,
-    "Viking FK vs. Aalesunds FK: O/U 0.5": 0.5,  # kept here, dropped later by the line filter
+    "Viking FK vs. Aalesunds FK: O/U 0.5": 0.5,
+    "Arsenal vs. Chelsea: O/U 1.5": 1.5,
 }
 
 DROP = [
@@ -26,9 +27,17 @@ DROP = [
     "Will Zack Steffen win 2026 MLS Goalkeeper of the Year?",
 ]
 
+# Only 0.5 and 1.5 O/U are monitored
+ALLOWED_LINES = (0.5, 1.5)
+
 if __name__ == "__main__":
     for q, line in KEEP.items():
         assert parse_game_total_line(q) == line, q
     for q in DROP:
         assert parse_game_total_line(q) is None, q
-    print(f"OK: {len(KEEP)} kept, {len(DROP)} dropped")
+    
+    # Test line filter
+    monitored = [line for line in KEEP.values() if line in ALLOWED_LINES]
+    assert monitored == [0.5, 1.5], f"Expected [0.5, 1.5], got {monitored}"
+    
+    print(f"OK: {len(KEEP)} parsed, {len(DROP)} dropped, {len(monitored)} monitored")

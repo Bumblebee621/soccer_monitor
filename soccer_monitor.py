@@ -754,8 +754,8 @@ class MarketDiscovery:
                         for market in event.get('markets', []):
                             line = parse_game_total_line(market.get('question', ''))
                             if line is not None:
-                                # Skip specific goal lines requested by user
-                                if line in (0.5, 5.5):
+                                # Only monitor 0.5 and 1.5 O/U markets as requested by user
+                                if line not in (0.5, 1.5):
                                     continue
                                 
                                 # Removed Market-level gameStartTime check as API-Football is now source of truth
