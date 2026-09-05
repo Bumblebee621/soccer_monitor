@@ -47,7 +47,7 @@ def make_target_event():
         "slug": "arsenal-liverpool",
         "tags": [{"label": "Premier League"}],
         "markets": [{
-            "question": "Arsenal vs. Liverpool: O/U 2.5",
+            "question": "Arsenal vs. Liverpool: O/U 1.5",
             "clobTokenIds": json.dumps(["OVER_TOKEN", TARGET_TOKEN]),
             "outcomes": json.dumps(["Over", "Under"]),
         }],
