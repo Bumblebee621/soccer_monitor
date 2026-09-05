@@ -62,6 +62,9 @@ def test_an_alias_tag_resolves_to_the_canonical_name():
     discovery = build()
     assert discovery._league_for_tags(["Soccer", "EPL"]) == "Premier League"
     assert discovery._league_for_tags(["Soccer", "ucl"]) == "Champions League"
+    assert discovery._league_for_tags(["Soccer", "sea"]) == "Serie A"
+    assert discovery._league_for_tags(["Soccer", "uel"]) == "Europa League"
+    assert discovery._league_for_tags(["Soccer", "uecl"]) == "Conference League"
 
 
 def test_unrecognised_tags_keep_a_readable_name_and_the_global_threshold():
