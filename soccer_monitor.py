@@ -858,6 +858,12 @@ class OrderBookMonitor:
         self.runtime_config = runtime_config
         self.monitored_markets: Dict[str, MarketInfo] = {}
         self.book_state: Dict[str, Dict[float, float]] = {} # token_id -> {price: size}
+        # Tokens seen at or above their threshold at least once. A market that is
+        # already below the line when we first subscribe (markets are discovered up
+        # to POLL_INTERVAL_MARKETS after kickoff, so that is the usual case for a
+        # game starting just under it) never fell there while we were watching, so
+        # it is not a dip. Survives reconnects on purpose, unlike book_state.
+        self.armed: set = set()
         self._idle_logged = False  # so "No markets to monitor" is said once, not every 10s
         self.markets_lock = asyncio.Lock()
         self.markets_changed_event = markets_changed_event
@@ -878,6 +884,11 @@ class OrderBookMonitor:
         async with self.markets_lock:
             market = self.monitored_markets.get(token_id)
         if not market:
+            return
+
+        if token_id not in self.armed:
+            # Below the line since the first book we saw. Wait for it to trade back
+            # above the threshold before a move below counts as a dip.
             return
 
         # Every dip tick lands here, but a token alerts at most once a day. Check that
@@ -917,6 +928,25 @@ class OrderBookMonitor:
 
         await self.alert_engine.send_alert(market, current_ask, score)
 
+    async def _check_ask(self, asset_id: str):
+        """Arm on an ask at or above the threshold, alert on one below it."""
+        if not self.book_state.get(asset_id):
+            # An empty book is no price at all. Treating the 1.0 default as
+            # above-threshold would arm a token whose asks were merely pulled.
+            return
+
+        lowest_ask = min(self.book_state[asset_id].keys())
+
+        market = self.monitored_markets.get(asset_id)
+        threshold = ASK_PRICE_THRESHOLD
+        if market:
+            threshold = self.runtime_config.get_threshold(market.league)
+
+        if lowest_ask >= threshold:
+            self.armed.add(asset_id)
+        elif ASK_PRICE_MIN < lowest_ask:
+            await self.process_dip(asset_id, lowest_ask)
+
     async def _process_event(self, data: dict):
         if not isinstance(data, dict):
             return
@@ -934,15 +964,7 @@ class OrderBookMonitor:
                 # place, and the removed low ask would then fire a dip alert on a
                 # price that no longer exists.
                 self.book_state[asset_id] = {float(ask.get("price", "1.0")): float(ask.get("size", "0.0")) for ask in asks}
-                lowest_ask = min(self.book_state[asset_id].keys(), default=1.0)
-                
-                market = self.monitored_markets.get(asset_id)
-                threshold = ASK_PRICE_THRESHOLD
-                if market:
-                    threshold = self.runtime_config.get_threshold(market.league)
-                
-                if ASK_PRICE_MIN < lowest_ask < threshold:
-                    await self.process_dip(asset_id, lowest_ask)
+                await self._check_ask(asset_id)
 
         elif event_type == "price_change":
             # Incremental update
@@ -962,15 +984,7 @@ class OrderBookMonitor:
                     else:
                         self.book_state[asset_id].pop(price, None)
                         
-                    lowest_ask = min(self.book_state[asset_id].keys(), default=1.0)
-                    
-                    market = self.monitored_markets.get(asset_id)
-                    threshold = ASK_PRICE_THRESHOLD
-                    if market:
-                        threshold = self.runtime_config.get_threshold(market.league)
-                        
-                    if ASK_PRICE_MIN < lowest_ask < threshold:
-                        await self.process_dip(asset_id, lowest_ask)
+                    await self._check_ask(asset_id)
 
     async def _handle_message(self, message: str):
         try:

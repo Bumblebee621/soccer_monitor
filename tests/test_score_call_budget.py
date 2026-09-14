@@ -49,6 +49,9 @@ def build(score):
             fixture_id=1557379,
         )
     }
+    # This test drives process_dip directly, so arm the token the way an
+    # above-threshold book would: the call budget is what is under test here.
+    monitor.armed.add("TOKEN")
     return monitor, tracker
 
 
