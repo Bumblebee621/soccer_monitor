@@ -15,9 +15,12 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import soccer_monitor
 from soccer_monitor import AlertEngine, MarketInfo, OrderBookMonitor
 
 logging.basicConfig(level=logging.WARNING)
+
+soccer_monitor.ALERT_CONFIRM_DELAY = 0  # the confirmation wait is tested elsewhere
 
 TICKS = 50
 
@@ -52,6 +55,9 @@ def build(score):
     # This test drives process_dip directly, so arm the token the way an
     # above-threshold book would: the call budget is what is under test here.
     monitor.armed.add("TOKEN")
+    # process_dip confirms against the live book before it spends a call, so it needs
+    # one: an empty book is a resolved market and would never reach the score fetch.
+    monitor.book_state["TOKEN"] = {0.05: 100.0}
     return monitor, tracker
 
 

@@ -48,6 +48,10 @@ SUSTAINED_OUTAGE_ALERT = int(os.getenv("SUSTAINED_OUTAGE_ALERT", "1800"))
 # Each attempt spends 2 of API-Football's 100 daily calls, and discovery_loop runs every
 # 15 minutes across a 12-hour window, so an unbounded retry would spend the whole quota.
 MAX_SCHEDULE_FETCH_ATTEMPTS = int(os.getenv("MAX_SCHEDULE_FETCH_ATTEMPTS", "5"))
+# A crossing is confirmed this many seconds later. A market a goal has just settled
+# keeps falling: within seconds its asks are swept to the minimum tick (0.001 on these
+# markets) or pulled altogether, and neither is a dip worth buying.
+ALERT_CONFIRM_DELAY = float(os.getenv("ALERT_CONFIRM_DELAY", "10"))
 SIMULATION_MODE = os.getenv("SIMULATION_MODE", "0") == "1"
 # Only scan events kicking off within this window of now; a match older than
 # KICKOFF_WINDOW_BEFORE_H has finished.
@@ -864,6 +868,10 @@ class OrderBookMonitor:
         # game starting just under it) never fell there while we were watching, so
         # it is not a dip. Survives reconnects on purpose, unlike book_state.
         self.armed: set = set()
+        # Tokens inside their confirmation wait, and the tasks running it. asyncio holds
+        # only a weak reference to a running task, so the set is what keeps them alive.
+        self.confirming: set = set()
+        self.dip_tasks: set = set()
         self._idle_logged = False  # so "No markets to monitor" is said once, not every 10s
         self.markets_lock = asyncio.Lock()
         self.markets_changed_event = markets_changed_event
@@ -895,6 +903,19 @@ class OrderBookMonitor:
         # before spending an API-Football call: the free plan allows only 100 a day.
         if token_id in self.alert_engine.last_alert_time:
             return
+
+        if token_id in self.confirming:
+            # This crossing is already waiting out its confirmation. Every further tick
+            # below the line belongs to the same dip, not to a new one.
+            return
+        self.confirming.add(token_id)
+        try:
+            confirmed_ask = await self._confirm_dip(token_id)
+        finally:
+            self.confirming.discard(token_id)
+        if confirmed_ask is None:
+            return
+        current_ask = confirmed_ask
 
         score = "N/A"
         if market.fixture_id:
@@ -928,6 +949,34 @@ class OrderBookMonitor:
 
         await self.alert_engine.send_alert(market, current_ask, score)
 
+    async def _confirm_dip(self, token_id: str) -> Optional[float]:
+        """Waits out ALERT_CONFIRM_DELAY, then returns the ask to alert on, or None.
+
+        A resolved market shows up two ways in the book, both seen in live Polymarket
+        data: the losing side is swept down to the minimum tick (0.001 there, well under
+        ASK_PRICE_MIN), or its asks are pulled and the book goes empty. Either way there
+        is nothing left to buy, so the crossing was the market dying, not a dip.
+        """
+        await asyncio.sleep(ALERT_CONFIRM_DELAY)
+
+        book = self.book_state.get(token_id)
+        if not book:
+            logger.info(
+                f"Dropping dip alert for {token_id}: every ask was pulled within "
+                f"{ALERT_CONFIRM_DELAY:.0f}s. Market is resolved, not cheap."
+            )
+            return None
+
+        lowest_ask = min(book)
+        if lowest_ask <= ASK_PRICE_MIN:
+            logger.info(
+                f"Dropping dip alert for {token_id}: ask fell to ${lowest_ask:.3f} within "
+                f"{ALERT_CONFIRM_DELAY:.0f}s. Market is resolved, not cheap."
+            )
+            return None
+
+        return lowest_ask
+
     async def _check_ask(self, asset_id: str):
         """Arm on an ask at or above the threshold, alert on one below it."""
         if not self.book_state.get(asset_id):
@@ -945,7 +994,11 @@ class OrderBookMonitor:
         if lowest_ask >= threshold:
             self.armed.add(asset_id)
         elif ASK_PRICE_MIN < lowest_ask:
-            await self.process_dip(asset_id, lowest_ask)
+            # Off the read loop on purpose: process_dip waits ALERT_CONFIRM_DELAY before
+            # sending, and awaiting it here would stall the very book updates it waits for.
+            task = asyncio.create_task(self.process_dip(asset_id, lowest_ask))
+            self.dip_tasks.add(task)
+            task.add_done_callback(self.dip_tasks.discard)
 
     async def _process_event(self, data: dict):
         if not isinstance(data, dict):

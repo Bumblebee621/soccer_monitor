@@ -64,10 +64,16 @@ def snapshot(asks):
             "asks": [{"price": str(p), "size": str(s)} for p, s in asks]}
 
 
+async def drain(monitor):
+    """A dip is handled off the read loop, so let those tasks finish before asserting."""
+    await asyncio.gather(*list(monitor.dip_tasks))
+
+
 async def test_a_dip_still_alerts():
     """Guard against 'fixed' by breaking the feature."""
     monitor, dips = build()
     await monitor._process_event(snapshot([(0.05, 100), (0.30, 50)]))
+    await drain(monitor)
     assert dips == [(TOKEN, 0.05)], dips
 
 
@@ -75,11 +81,13 @@ async def test_emptied_book_does_not_alert_on_a_withdrawn_ask():
     monitor, dips = build()
 
     await monitor._process_event(snapshot([(0.05, 100)]))
+    await drain(monitor)
     assert dips == [(TOKEN, 0.05)], "the initial dip should alert"
     dips.clear()
 
     # Every ask is pulled. The book is now empty, not unchanged.
     await monitor._process_event(snapshot([]))
+    await drain(monitor)
 
     assert monitor.book_state[TOKEN] == {}, "an empty snapshot must empty the book"
     assert dips == [], "must not alert on an ask that was withdrawn"

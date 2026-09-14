@@ -13,11 +13,13 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import soccer_monitor
 from soccer_monitor import AlertEngine, MarketInfo, OrderBookMonitor
 
 logging.basicConfig(level=logging.CRITICAL)
 
 TOKEN = "TOKEN"
+soccer_monitor.ALERT_CONFIRM_DELAY = 0  # the confirmation wait is tested elsewhere
 
 
 class FixedThresholdConfig:
@@ -53,10 +55,16 @@ def snapshot(asks):
             "asks": [{"price": str(p), "size": "100"} for p in asks]}
 
 
+async def drain(monitor):
+    """A dip confirms off the read loop, so let those tasks finish before asserting."""
+    await asyncio.gather(*list(monitor.dip_tasks))
+
+
 async def test_opening_below_threshold_is_silent():
     monitor, alerts = build()
     await monitor._process_event(snapshot([0.05]))
     await monitor._process_event(snapshot([0.04]))
+    await drain(monitor)
     assert alerts == [], f"a market that opened below the line must not alert: {alerts}"
 
 
@@ -65,6 +73,7 @@ async def test_crossing_up_then_back_down_alerts():
     await monitor._process_event(snapshot([0.05]))   # opens below -- silent
     await monitor._process_event(snapshot([0.14]))   # trades back above the line
     await monitor._process_event(snapshot([0.05]))   # real dip
+    await drain(monitor)
     assert alerts == [0.05], f"a genuine crossing must alert: {alerts}"
 
 
@@ -74,6 +83,7 @@ async def test_an_emptied_book_does_not_arm():
     await monitor._process_event(snapshot([0.05]))
     await monitor._process_event(snapshot([]))
     await monitor._process_event(snapshot([0.05]))
+    await drain(monitor)
     assert alerts == [], f"an empty book must not count as trading above: {alerts}"
 
 

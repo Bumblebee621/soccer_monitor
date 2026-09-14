@@ -42,6 +42,7 @@ API_FOOTBALL_KEY="your_api_football_key"
 # Base Tuning Variables (Can be overridden via Telegram Bot)
 ASK_PRICE_THRESHOLD="0.10"       # Default global price at which to trigger a dip alert
 ASK_PRICE_MIN="0.01"             # Minimum price to avoid noise
+ALERT_CONFIRM_DELAY="10"         # Seconds to wait before confirming a crossing is a real dip
 POLL_INTERVAL_MARKETS="900"      # Seconds between API-Football / Gamma API market discovery polls
 WS_RECONNECT_DELAY="5"           # Seconds to wait before reconnecting WebSocket
 KICKOFF_WINDOW_BEFORE_H="4"      # Only scan events that kicked off within this many hours
