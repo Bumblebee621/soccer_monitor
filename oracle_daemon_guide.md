@@ -148,7 +148,7 @@ sudo systemctl status soccer_monitor sma_crossover_bot
 ### 10. Verify
 
 ```bash
-journalctl -u soccer_monitor -f -o short-iso        # WebSocket connects, market poll completes
+journalctl -u soccer_monitor -f -o short-iso        # Minute polls appear during active hours
 ```
 
 Send `/menu` to your Telegram bot and confirm it responds.
@@ -184,7 +184,9 @@ Swap in `sma_crossover_bot` for the other bot.
 
 ```bash
 cd /home/ubuntu/soccer_monitor
-git pull
+git pull --ff-only
+sudo install -m 644 soccer_monitor.service /etc/systemd/system/soccer_monitor.service
+sudo systemctl daemon-reload
 sudo systemctl restart soccer_monitor
 journalctl -u soccer_monitor -f -n 20
 ```

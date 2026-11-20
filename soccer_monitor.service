@@ -1,5 +1,5 @@
 [Unit]
-Description=Polymarket Soccer Margins Monitor Daemon
+Description=Polymarket Live Soccer Under Monitor
 After=network-online.target
 Wants=network-online.target
 
@@ -10,7 +10,7 @@ Group=ubuntu
 
 # Paths match the Oracle Cloud Ubuntu image default user
 WorkingDirectory=/home/ubuntu/soccer_monitor
-ExecStart=/home/ubuntu/soccer_monitor/venv/bin/python soccer_monitor.py
+ExecStart=/home/ubuntu/soccer_monitor/venv/bin/python live_under_monitor.py
 
 Restart=on-failure
 RestartSec=10

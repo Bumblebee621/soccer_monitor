@@ -11,3 +11,4 @@ env/
 .gemini/
 sma_state.json
 config_state.json
+live_under_alerts.sqlite3*

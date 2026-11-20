@@ -168,7 +168,8 @@ class ApiHealth:
     calls. status_lines() reads recorded state; it never probes.
     """
 
-    def __init__(self):
+    def __init__(self, dependencies=DEPENDENCIES):
+        self.dependencies = dependencies
         self.deps: Dict[str, DependencyHealth] = {}
         self.quota_remaining: Optional[int] = None  # API-Football calls left today
 
@@ -224,7 +225,7 @@ class ApiHealth:
     def status_lines(self) -> List[str]:
         """One display line per dependency, safe to drop into a Markdown message."""
         lines = []
-        for name in DEPENDENCIES:
+        for name in self.dependencies:
             dep = self.deps.get(name)
             if dep is None or dep.ok is None:
                 lines.append(f"\u25ab\ufe0f {name} \u2014 not called yet")
@@ -553,8 +554,8 @@ class AlertEngine:
         if await self.send_text(message):
             logger.info("Telegram alert sent successfully.")
 
-    async def send_text(self, message: str) -> bool:
-        """Posts one pre-formatted HTML message to the configured chat."""
+    async def send_text(self, message: str, *, report_uncertain: bool = False) -> Optional[bool]:
+        """Send HTML to the configured chat. Optionally return None for uncertain delivery."""
         if not (self.bot_token and self.chat_id):
             logger.info("Telegram credentials not configured. Skipping Telegram notification.")
             return False
@@ -570,13 +571,15 @@ class AlertEngine:
                 if response.status != 200:
                     self.health.fail(DEP_TELEGRAM, f"HTTP {response.status}")
                     logger.error(f"Failed to send Telegram message: {response.status}", extra=NO_TELEGRAM)
+                    if report_uncertain and (response.status >= 500 or response.status == 408):
+                        return None
                     return False
                 self.health.ok(DEP_TELEGRAM)
                 return True
         except Exception as e:
             self.health.fail(DEP_TELEGRAM, f"{type(e).__name__}: {e}", exc=e)
             logger.error(f"Exception sending Telegram message: {e}", extra=NO_TELEGRAM)
-            return False
+            return None if report_uncertain else False
 
 
 class MarketDiscovery:

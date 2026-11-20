@@ -1,66 +1,28 @@
-# Polymarket Soccer Dip Monitor
+# Polymarket Live Soccer Under Monitor
 
-An asynchronous Python background daemon designed to monitor live soccer betting markets on Polymarket for specific price dips in "Over/Under" contracts.
+`live_under_monitor.py` polls Polymarket once a minute from 14:00 up to 23:00 Israel local time. It looks for the lowest ask, the cheapest offer to sell, on these full-game Under markets in live matches from the enabled leagues.
 
-## The "Dip" Strategy
+| Full-game total | Default alert limit |
+| --- | ---: |
+| Under 5.5 goals | 80¢ |
+| Under 6.5 goals | 85¢ |
+| Under 7.5 goals | 85¢ |
 
-This script automates the detection of **Post-Goal Dips** in Polymarket soccer "Under" contracts. 
-
-In betting markets, when a goal is scored, the probability that the total amount of goals will stay "Under" a certain threshold drops significantly. This causes the price of the "Under" contract to fall sharply (a "dip"). However, as time elapses without further goals being scored, the probability of the "Under" hitting slowly increases, causing the price to climb back up due to natural **time decay** (theta). 
-
-This tool is designed to find these momentary price drops immediately after an event shock so you can "buy the dip" and capitalize on the subsequent price rebound as match time ticks away.
-
-## Key Features
-
-*   **Live Match Detection (API-Football)**: Uses API-Football as the authoritative source for daily schedules. It fuzzy-matches Polymarket events against live games to ensure we only monitor matches that are actively being played.
-*   **Real-time Order Book Monitoring**: Connects to Polymarket's Central Limit Order Book (CLOB) via WebSockets to track the `ASK` prices of "Under" tokens continuously.
-*   **Live Score Integration & Dead Market Protection**: When a dip occurs, it queries API-Football for the live score. If the current total goals already exceed the market threshold, it suppresses the alert, preventing false positives on mathematically dead markets.
-*   **Interactive Telegram Control Panel**: Manage the daemon on the fly via a Telegram Bot. Send `/menu` to view status, toggle active leagues, and adjust price thresholds directly from your phone.
-*   **Persistent Runtime Configuration**: All settings are saved to a local `config_state.json` file, ensuring your active leagues and custom thresholds survive daemon restarts.
-*   **Simulation Mode**: A testing mode that simulates market data and websocket events without hitting live APIs.
-
-## How It Works
-
-1.  **Schedule Fetching**: At the start of the active window (13:00 IDT), it fetches the daily schedule for target leagues from API-Football.
-2.  **Market Discovery**: Periodically queries Polymarket's Gamma REST API for active soccer markets. It filters these events to only include those matching the live teams currently playing.
-3.  **Monitoring**: Subscribes to the Polymarket WebSocket for the discovered "Under" tokens.
-4.  **Dip Detection & Verification**: When an `ASK` price drops below the threshold, it fetches the live score to verify the market isn't already dead.
-5.  **Alerting**: Sends a formatted alert to your Telegram chat with the match, market, lowest ask price, and the current score. Each token alerts at most **once per day**, reset at midnight Israel time. This is not tunable, and deliberately so: every alert costs an API-Football call to fetch the score, and the free plan allows only 100 a day.
+The first poll at or below the limit triggers a Telegram alert. The monitor stores alert history in `live_under_alerts.sqlite3` so each market alerts at most once across restarts. Keep that file when moving the service to a new host.
 
 ## Setup & Configuration
 
-This project relies on environment variables for API keys and a `.env` file in the root directory:
+Set `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` in the project’s `.env` file. Market prices and match status come from Polymarket’s public APIs.
 
-```env
-# Required: Telegram Bot for UI and Alerts
-TELEGRAM_BOT_TOKEN="your_telegram_bot_token"
-TELEGRAM_CHAT_ID="your_telegram_chat_id"
+## Changing a threshold in Telegram
 
-# Required: Live Match Detection & Score Integration (api-sports.io)
-API_FOOTBALL_KEY="your_api_football_key"
+1. Send `/menu` to your bot.
+2. Tap **Edit Thresholds**.
+3. Choose a league.
+4. Choose an Under line.
+5. Enter the limit in cents, for example `80`.
 
-# Base Tuning Variables (Can be overridden via Telegram Bot)
-ASK_PRICE_THRESHOLD="0.10"       # Default global price at which to trigger a dip alert
-ASK_PRICE_MIN="0.01"             # Minimum price to avoid noise
-ALERT_CONFIRM_DELAY="10"         # Seconds to wait before confirming a crossing is a real dip
-POLL_INTERVAL_MARKETS="900"      # Seconds between API-Football / Gamma API market discovery polls
-WS_RECONNECT_DELAY="5"           # Seconds to wait before reconnecting WebSocket
-KICKOFF_WINDOW_BEFORE_H="4"      # Only scan events that kicked off within this many hours
-KICKOFF_WINDOW_AFTER_H="1"       # ...or that kick off within this many hours
-
-# Simulation
-SIMULATION_MODE="0"              # Set to 1 to run mock data
-```
-
-
-## Runtime Configuration via Telegram
-
-You no longer need to restart the daemon to change settings. Start a chat with your configured bot and send `/menu`.
-
-The Bot UI allows you to:
-*   View active leagues and current thresholds.
-*   **Edit Thresholds**: Set a global threshold or configure specific overrides for individual leagues (e.g., lower threshold for high-scoring leagues).
-*   **Manage Leagues**: Toggle monitoring on/off for 20+ supported leagues (Premier League, La Liga, World Cup, Champions League, MLS, etc.).
+**Manage Leagues** controls which leagues the monitor checks. League selections and limits are saved in `config_state.json` and apply without a restart.
 
 ## Running the Daemon
 
@@ -68,7 +30,7 @@ Dependencies are declared in `pyproject.toml` and pinned in `uv.lock`.
 
 ```bash
 uv sync
-uv run python soccer_monitor.py
+uv run python live_under_monitor.py
 ```
 
 ## Deployment

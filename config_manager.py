@@ -17,6 +17,7 @@ SUPPORTED_LEAGUES = {    # Top 5 European Leagues
     # International Tournaments
     "World Cup": {"api_id": 1, "polymarket_tags": ["fifa world cup", "world cup"], "flag": "🌍"},
     "Euro Championship": {"api_id": 4, "polymarket_tags": ["euro", "european championship", "uefa euro"], "flag": "🇪🇺"},
+    "UEFA Nations League": {"api_id": 5, "polymarket_tags": ["uefa nations league", "unl"], "flag": "🇪🇺"},
     # UEFA Club Competitions
     "Champions League": {"api_id": 2, "polymarket_tags": ["champions league", "ucl"], "flag": "🇪🇺"},
     "Europa League": {"api_id": 3, "polymarket_tags": ["europa league", "uel"], "flag": "🇪🇺"},
@@ -35,19 +36,25 @@ DEFAULT_ACTIVE_LEAGUES = [
     "Serie A",
     "Bundesliga",
     "Ligue 1",
-    "World Cup"
+    "World Cup",
+    "UEFA Nations League",
 ]
+UNDER_DEFAULT_THRESHOLDS = {5.5: 0.80, 6.5: 0.85, 7.5: 0.85}
+UNDER_ACTIVE_START_HOUR = 14
+UNDER_ACTIVE_END_HOUR = 23
 
 class RuntimeConfig:
-    def __init__(self, filepath=None):
+    def __init__(self, filepath=None, *, under_totals=False):
         if filepath is None:
             filepath = os.path.join(SCRIPT_DIR, "config_state.json")
         self.filepath = filepath
+        self.under_totals = under_totals
         
         # Default settings
         self.global_threshold = float(os.getenv("ASK_PRICE_THRESHOLD", "0.10"))
         self.active_leagues: List[str] = list(DEFAULT_ACTIVE_LEAGUES)
         self.league_thresholds: Dict[str, float] = {} # e.g. {"La Liga": 0.08}
+        self.under_thresholds: Dict[str, Dict[str, float]] = {}
         
         self.load()
 
@@ -59,6 +66,7 @@ class RuntimeConfig:
                 self.global_threshold = data.get("global_threshold", self.global_threshold)
                 self.active_leagues = data.get("active_leagues", self.active_leagues)
                 self.league_thresholds = data.get("league_thresholds", self.league_thresholds)
+                self.under_thresholds = data.get("under_thresholds", {})
                 logger.info(f"Loaded config from {self.filepath}")
             except Exception as e:
                 logger.error(f"Failed to load config: {e}")
@@ -71,6 +79,9 @@ class RuntimeConfig:
             "active_leagues": self.active_leagues,
             "league_thresholds": self.league_thresholds,
         }
+        under_thresholds = getattr(self, "under_thresholds", {})
+        if under_thresholds:
+            data["under_thresholds"] = under_thresholds
         # Write a temporary file and rename it over the target. os.replace is
         # atomic, so a crash mid-save leaves the previous config intact instead of a
         # truncated file -- which load() would fail to parse and silently replace with
@@ -89,8 +100,24 @@ class RuntimeConfig:
                 if os.path.exists(tmp_path):
                     os.unlink(tmp_path)
                 raise
+            return True
         except Exception as e:
             logger.error(f"Failed to save config: {e}")
+            return False
+
+    def get_under_threshold(self, league: str, line: float) -> float:
+        return self.under_thresholds.get(league, {}).get(str(line), UNDER_DEFAULT_THRESHOLDS[line])
+
+    def set_under_threshold(self, league: str, line: float, price: float) -> bool:
+        if league not in SUPPORTED_LEAGUES or line not in UNDER_DEFAULT_THRESHOLDS or not 0 < price <= 1:
+            raise ValueError("Invalid league, goal line or price")
+        previous = self.under_thresholds
+        overrides = previous.get(league, {}) | {str(line): price}
+        self.under_thresholds = previous | {league: overrides}
+        if self.save():
+            return True
+        self.under_thresholds = previous
+        return False
 
     def get_threshold(self, league_name: str) -> float:
         # Match polymorphic league name string to our standardized supported leagues
